@@ -23,9 +23,13 @@ const PriceAlerts = () => {
   const { data: alerts, refetch } = useQuery({
     queryKey: ["price-alerts"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
       const { data, error } = await supabase
         .from("price_alerts")
         .select("*")
+        .eq('user_id', user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -37,13 +41,22 @@ const PriceAlerts = () => {
     e.preventDefault();
 
     try {
-      const { error } = await supabase.from("price_alerts").insert([
-        {
-          cryptocurrency,
-          target_price: parseFloat(targetPrice),
-          condition,
-        },
-      ]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create price alerts",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase.from("price_alerts").insert({
+        cryptocurrency,
+        target_price: parseFloat(targetPrice),
+        condition,
+        user_id: user.id,
+      });
 
       if (error) throw error;
 
