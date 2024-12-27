@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowUpIcon, ArrowDownIcon, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
 
 const fetchMarketSentiment = async () => {
   const response = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&community_data=true&developer_data=false&sparkline=false');
@@ -13,8 +12,6 @@ const fetchMarketSentiment = async () => {
   return {
     sentiment_votes_up_percentage: data.sentiment_votes_up_percentage,
     sentiment_votes_down_percentage: data.sentiment_votes_down_percentage,
-    market_cap_change_24h: data.market_cap_change_percentage_24h,
-    price_change_24h: data.price_change_percentage_24h,
   };
 };
 
@@ -52,23 +49,6 @@ const MarketSentiment = () => {
           <div className="flex justify-between mt-1">
             <span className="text-sm font-medium">{data?.sentiment_votes_up_percentage}%</span>
             <span className="text-sm font-medium">{data?.sentiment_votes_down_percentage}%</span>
-          </div>
-        </div>
-
-        {/* 24h Changes */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-secondary/10">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Price 24h</span>
-              {data?.price_change_24h >= 0 ? (
-                <ArrowUpIcon className="w-4 h-4 text-success" />
-              ) : (
-                <ArrowDownIcon className="w-4 h-4 text-warning" />
-              )}
-            </div>
-            <p className={`text-lg font-semibold ${data?.price_change_24h >= 0 ? 'text-success' : 'text-warning'}`}>
-              {data?.price_change_24h?.toFixed(2)}%
-            </p>
           </div>
         </div>
       </div>
