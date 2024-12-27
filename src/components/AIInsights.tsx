@@ -14,14 +14,23 @@ const AIInsights = () => {
   const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState("prediction");
 
-  const { data: insights, isLoading } = useQuery({
+  const { data: insights, isLoading, error } = useQuery({
     queryKey: ['aiInsights', selectedTab],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('ai-insights', {
-        body: { analysisType: selectedTab },
-      });
+      try {
+        console.log('Fetching AI insights for:', selectedTab);
+        const { data, error } = await supabase.functions.invoke('ai-insights', {
+          body: { analysisType: selectedTab },
+        });
 
-      if (error) {
+        if (error) {
+          console.error('Supabase function error:', error);
+          throw error;
+        }
+
+        return data as AIResponse;
+      } catch (error) {
+        console.error('Error in AI insights query:', error);
         toast({
           title: "Error",
           description: "Failed to fetch AI insights. Please try again later.",
@@ -29,9 +38,9 @@ const AIInsights = () => {
         });
         throw error;
       }
-
-      return data as AIResponse;
     },
+    retry: 1,
+    retryDelay: 1000,
   });
 
   const renderContent = (content: string | undefined) => {
@@ -40,6 +49,12 @@ const AIInsights = () => {
         <div className="h-4 bg-secondary/50 rounded w-3/4"></div>
         <div className="h-4 bg-secondary/50 rounded w-1/2"></div>
         <div className="h-4 bg-secondary/50 rounded w-2/3"></div>
+      </div>;
+    }
+
+    if (error) {
+      return <div className="text-destructive">
+        Failed to load insights. Please try again later.
       </div>;
     }
 

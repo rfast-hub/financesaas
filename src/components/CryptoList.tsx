@@ -3,11 +3,28 @@ import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/use-toast";
 
 const fetchCryptoData = async () => {
-  const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=5&page=1&sparkline=false');
-  if (!response.ok) {
-    throw new Error('Failed to fetch crypto data');
+  try {
+    const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=5&page=1&sparkline=false', {
+      headers: {
+        'Accept': 'application/json',
+        // Add a cache-control header to respect rate limits
+        'Cache-Control': 'max-age=30'
+      }
+    });
+    
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again in a minute.');
+    }
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch crypto data');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching crypto data:', error);
+    throw error;
   }
-  return response.json();
 };
 
 const CryptoList = () => {

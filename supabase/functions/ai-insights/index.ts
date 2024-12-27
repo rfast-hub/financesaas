@@ -24,14 +24,22 @@ const getPromptForAnalysisType = (type: string) => {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('Received request for AI insights');
     const { analysisType } = await req.json();
     const prompt = getPromptForAnalysisType(analysisType);
 
+    if (!perplexityApiKey) {
+      console.error('Missing PERPLEXITY_API_KEY');
+      throw new Error('API key not configured');
+    }
+
+    console.log('Calling Perplexity API with analysis type:', analysisType);
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
@@ -56,10 +64,13 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
+      console.error('Perplexity API error:', response.status);
       throw new Error(`Perplexity API error: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Successfully generated AI insights');
+    
     return new Response(
       JSON.stringify({ content: data.choices[0].message.content }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
