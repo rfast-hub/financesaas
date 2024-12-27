@@ -3,7 +3,6 @@ import CryptoChart from "@/components/CryptoChart";
 import CryptoList from "@/components/CryptoList";
 import CryptoChatbot from "@/components/CryptoChatbot";
 import PriceAlerts from "@/components/PriceAlerts";
-import TechnicalIndicators from "@/components/TechnicalIndicators";
 import MarketSentiment from "@/components/MarketSentiment";
 
 const Index = () => {
@@ -30,8 +29,7 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <TechnicalIndicators />
+        <div>
           <MarketSentiment />
         </div>
 
