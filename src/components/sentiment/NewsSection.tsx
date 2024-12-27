@@ -54,7 +54,7 @@ const NewsSection = () => {
         <h3 className="text-lg font-semibold">Latest Crypto News</h3>
       </div>
       
-      <ScrollArea className="h-[400px]">
+      <ScrollArea className="h-[1000px]">
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
