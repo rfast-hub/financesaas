@@ -4,6 +4,7 @@ import CryptoList from "@/components/CryptoList";
 import CryptoChatbot from "@/components/CryptoChatbot";
 import PriceAlerts from "@/components/PriceAlerts";
 import MarketSentiment from "@/components/MarketSentiment";
+import AIInsights from "@/components/AIInsights";
 
 const Index = () => {
   return (
@@ -29,8 +30,9 @@ const Index = () => {
           </div>
         </div>
 
-        <div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <MarketSentiment />
+          <AIInsights />
         </div>
 
         <PriceAlerts />
