@@ -3,14 +3,16 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Newspaper } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const fetchMarketSentiment = async () => {
-  const response = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&community_data=true&developer_data=false&sparkline=false');
-  if (!response.ok) {
-    throw new Error('Failed to fetch market sentiment');
-  }
-  const data = await response.json();
+  const { data, error } = await supabase.functions.invoke('crypto-proxy', {
+    body: {
+      endpoint: '/coins/bitcoin?localization=false&tickers=false&community_data=true&developer_data=false&sparkline=false'
+    }
+  });
   
+  if (error) throw error;
   return {
     sentiment_votes_up_percentage: data.sentiment_votes_up_percentage,
     sentiment_votes_down_percentage: data.sentiment_votes_down_percentage,
@@ -19,22 +21,13 @@ const fetchMarketSentiment = async () => {
 
 const fetchCryptoNews = async () => {
   try {
-    const response = await fetch('https://api.coingecko.com/api/v3/status_updates', {
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'max-age=30'
+    const { data, error } = await supabase.functions.invoke('crypto-proxy', {
+      body: {
+        endpoint: '/status_updates'
       }
     });
     
-    if (response.status === 429) {
-      throw new Error('Rate limit exceeded. Please try again in a minute.');
-    }
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch crypto news');
-    }
-    
-    const data = await response.json();
+    if (error) throw error;
     return data.status_updates.slice(0, 5); // Get latest 5 news items
   } catch (error) {
     console.error('Error fetching crypto news:', error);
