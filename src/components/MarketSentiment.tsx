@@ -70,20 +70,6 @@ const MarketSentiment = () => {
               {data?.price_change_24h?.toFixed(2)}%
             </p>
           </div>
-
-          <div className="p-4 rounded-lg bg-secondary/10">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Market Cap 24h</span>
-              {data?.market_cap_change_24h >= 0 ? (
-                <TrendingUpIcon className="w-4 h-4 text-success" />
-              ) : (
-                <TrendingDownIcon className="w-4 h-4 text-warning" />
-              )}
-            </div>
-            <p className={`text-lg font-semibold ${data?.market_cap_change_24h >= 0 ? 'text-success' : 'text-warning'}`}>
-              {data?.market_cap_change_24h?.toFixed(2)}%
-            </p>
-          </div>
         </div>
       </div>
     </Card>
