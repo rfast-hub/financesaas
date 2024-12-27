@@ -16,19 +16,11 @@ const CryptoChatbot = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const [apiKey, setApiKey] = useState('');
+  const API_KEY = 'YOUR_API_KEY_HERE'; // Replace this with your actual API key
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    if (!apiKey) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter your Perplexity API key to use the chatbot.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     const userMessage = input.trim();
     setInput('');
@@ -39,7 +31,7 @@ const CryptoChatbot = () => {
       const response = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -83,29 +75,6 @@ const CryptoChatbot = () => {
         <CardTitle className="text-xl font-semibold">Crypto AI Assistant</CardTitle>
       </CardHeader>
       <CardContent>
-        {!apiKey && (
-          <div className="mb-4">
-            <Input
-              type="password"
-              placeholder="Enter your Perplexity API key"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="mb-2"
-            />
-            <p className="text-sm text-muted-foreground">
-              You need a Perplexity API key to use the chatbot.
-              <a
-                href="https://docs.perplexity.ai/docs/getting-started"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-1 text-primary hover:underline"
-              >
-                Get one here
-              </a>
-            </p>
-          </div>
-        )}
-        
         <ScrollArea className="h-[400px] pr-4">
           <div className="space-y-4">
             {messages.map((message, index) => (
