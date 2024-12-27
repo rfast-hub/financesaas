@@ -2,6 +2,7 @@ import MarketStats from "@/components/MarketStats";
 import CryptoChart from "@/components/CryptoChart";
 import CryptoList from "@/components/CryptoList";
 import CryptoChatbot from "@/components/CryptoChatbot";
+import PriceAlerts from "@/components/PriceAlerts";
 
 const Index = () => {
   return (
@@ -26,6 +27,8 @@ const Index = () => {
             <CryptoList />
           </div>
         </div>
+
+        <PriceAlerts />
 
         <div className="mt-8">
           <CryptoChatbot />

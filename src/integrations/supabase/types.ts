@@ -9,7 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      price_alerts: {
+        Row: {
+          condition: string
+          created_at: string | null
+          cryptocurrency: string
+          email_notification: boolean | null
+          id: string
+          is_active: boolean | null
+          target_price: number
+          triggered_at: string | null
+          user_id: string
+        }
+        Insert: {
+          condition: string
+          created_at?: string | null
+          cryptocurrency: string
+          email_notification?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          target_price: number
+          triggered_at?: string | null
+          user_id: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string | null
+          cryptocurrency?: string
+          email_notification?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          target_price?: number
+          triggered_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
