@@ -46,8 +46,15 @@ serve(async (req) => {
       }
 
       const data = await response.json()
+      console.log('Alpha Vantage response:', JSON.stringify(data).slice(0, 200)) // Log first 200 chars of response
+      
+      if (!data.feed || !Array.isArray(data.feed)) {
+        console.error('Unexpected response format:', data)
+        throw new Error('Invalid response format from Alpha Vantage')
+      }
+
       return new Response(
-        JSON.stringify(data.feed || []),
+        JSON.stringify(data.feed.slice(0, 5)),
         { 
           headers: { 
             ...corsHeaders,

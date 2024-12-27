@@ -19,8 +19,17 @@ const fetchCryptoNews = async () => {
       }
     });
     
-    if (error) throw error;
-    return data?.slice(0, 5) || [];
+    if (error) {
+      console.error('Error fetching news:', error);
+      throw error;
+    }
+
+    if (!data || !Array.isArray(data)) {
+      console.error('Invalid news data format:', data);
+      throw new Error('Invalid news data format');
+    }
+
+    return data;
   } catch (error) {
     console.error('Error fetching crypto news:', error);
     throw error;
@@ -28,11 +37,15 @@ const fetchCryptoNews = async () => {
 };
 
 const NewsSection = () => {
-  const { data: newsData, isLoading } = useQuery({
+  const { data: newsData, isLoading, error } = useQuery({
     queryKey: ['cryptoNews'],
     queryFn: fetchCryptoNews,
     refetchInterval: 300000, // Refresh every 5 minutes
   });
+
+  if (error) {
+    console.error('News fetch error:', error);
+  }
 
   return (
     <div className="mt-8">
@@ -51,9 +64,9 @@ const NewsSection = () => {
               </div>
             ))}
           </div>
-        ) : (
+        ) : newsData && newsData.length > 0 ? (
           <div className="space-y-4">
-            {newsData?.map((news: NewsItem, index: number) => (
+            {newsData.map((news: NewsItem, index: number) => (
               <div key={index} className="border-b border-border pb-3 last:border-0">
                 <a 
                   href={news.url} 
@@ -71,6 +84,10 @@ const NewsSection = () => {
                 </p>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground py-4">
+            No news available at the moment
           </div>
         )}
       </ScrollArea>
