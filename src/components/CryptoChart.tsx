@@ -9,7 +9,7 @@ const CryptoChart = () => {
       <div className="h-[400px] w-full">
         <TradingViewWidget
           symbol="BINANCE:BTCUSDT"
-          theme="dark"
+          theme="Dark"
           locale="en"
           autosize
           hide_side_toolbar={false}
@@ -20,6 +20,7 @@ const CryptoChart = () => {
           hide_top_toolbar={false}
           save_image={false}
           container_id="tradingview_chart"
+          style={{height: "100%", width: "100%"}}
         />
       </div>
     </div>
