@@ -23,12 +23,12 @@ const fetchCryptoNews = async () => {
   try {
     const { data, error } = await supabase.functions.invoke('crypto-proxy', {
       body: {
-        endpoint: '/status_updates'
+        endpoint: '/news'
       }
     });
     
     if (error) throw error;
-    return data.status_updates.slice(0, 5); // Get latest 5 news items
+    return data?.slice(0, 5) || []; // Get latest 5 news items or empty array if no data
   } catch (error) {
     console.error('Error fetching crypto news:', error);
     throw error;
@@ -99,9 +99,9 @@ const MarketSentiment = () => {
               <div className="space-y-4">
                 {newsData?.map((news: any) => (
                   <div key={news.id} className="border-b border-border pb-3 last:border-0">
-                    <p className="text-sm font-medium">{news.description}</p>
+                    <p className="text-sm font-medium">{news.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(news.created_at).toLocaleDateString()}
+                      {new Date(news.published_at).toLocaleDateString()}
                     </p>
                   </div>
                 ))}
