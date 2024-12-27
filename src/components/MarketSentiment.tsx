@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Newspaper } from "lucide-react";
 
 const fetchMarketSentiment = async () => {
   const response = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&community_data=true&developer_data=false&sparkline=false');
@@ -15,14 +17,45 @@ const fetchMarketSentiment = async () => {
   };
 };
 
+const fetchCryptoNews = async () => {
+  try {
+    const response = await fetch('https://api.coingecko.com/api/v3/status_updates', {
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'max-age=30'
+      }
+    });
+    
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again in a minute.');
+    }
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch crypto news');
+    }
+    
+    const data = await response.json();
+    return data.status_updates.slice(0, 5); // Get latest 5 news items
+  } catch (error) {
+    console.error('Error fetching crypto news:', error);
+    throw error;
+  }
+};
+
 const MarketSentiment = () => {
-  const { data, isLoading } = useQuery({
+  const { data: sentimentData, isLoading: isSentimentLoading } = useQuery({
     queryKey: ['marketSentiment'],
     queryFn: fetchMarketSentiment,
     refetchInterval: 300000, // Refresh every 5 minutes
   });
 
-  if (isLoading) {
+  const { data: newsData, isLoading: isNewsLoading } = useQuery({
+    queryKey: ['cryptoNews'],
+    queryFn: fetchCryptoNews,
+    refetchInterval: 300000,
+  });
+
+  if (isSentimentLoading) {
     return (
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-4">Market Sentiment</h2>
@@ -45,11 +78,43 @@ const MarketSentiment = () => {
             <span className="text-sm text-muted-foreground">Bullish</span>
             <span className="text-sm text-muted-foreground">Bearish</span>
           </div>
-          <Progress value={data?.sentiment_votes_up_percentage} className="h-2" />
+          <Progress value={sentimentData?.sentiment_votes_up_percentage} className="h-2" />
           <div className="flex justify-between mt-1">
-            <span className="text-sm font-medium">{data?.sentiment_votes_up_percentage}%</span>
-            <span className="text-sm font-medium">{data?.sentiment_votes_down_percentage}%</span>
+            <span className="text-sm font-medium">{sentimentData?.sentiment_votes_up_percentage}%</span>
+            <span className="text-sm font-medium">{sentimentData?.sentiment_votes_down_percentage}%</span>
           </div>
+        </div>
+
+        {/* News Section */}
+        <div className="mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Newspaper className="w-5 h-5" />
+            <h3 className="text-lg font-semibold">Latest Crypto News</h3>
+          </div>
+          
+          <ScrollArea className="h-[200px]">
+            {isNewsLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-4 bg-secondary/50 rounded w-3/4 mb-2" />
+                    <div className="h-3 bg-secondary/50 rounded w-1/2" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {newsData?.map((news: any) => (
+                  <div key={news.id} className="border-b border-border pb-3 last:border-0">
+                    <p className="text-sm font-medium">{news.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(news.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
         </div>
       </div>
     </Card>
