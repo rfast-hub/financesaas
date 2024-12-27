@@ -2,17 +2,31 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
   try {
-    const url = new URL(req.url)
-    const endpoint = url.searchParams.get('endpoint')
+    const { endpoint } = await req.json()
     
     if (!endpoint) {
       return new Response(
         JSON.stringify({ error: 'Endpoint parameter is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       )
     }
+
+    console.log(`Proxying request to: ${COINGECKO_BASE_URL}${endpoint}`)
 
     const response = await fetch(`${COINGECKO_BASE_URL}${endpoint}`, {
       headers: {
@@ -24,7 +38,10 @@ serve(async (req) => {
     if (response.status === 429) {
       return new Response(
         JSON.stringify({ error: 'Rate limit exceeded' }),
-        { status: 429, headers: { 'Content-Type': 'application/json' } }
+        { 
+          status: 429, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       )
     }
 
@@ -34,16 +51,19 @@ serve(async (req) => {
       JSON.stringify(data),
       { 
         headers: { 
+          ...corsHeaders,
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
         } 
       }
     )
   } catch (error) {
+    console.error('Error in crypto-proxy:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     )
   }
 })

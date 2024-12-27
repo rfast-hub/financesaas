@@ -1,12 +1,16 @@
 import { ArrowUpIcon, ArrowDownIcon, TrendingUpIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const fetchGlobalData = async () => {
-  const response = await fetch('https://api.coingecko.com/api/v3/global');
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
+  const { data, error } = await supabase.functions.invoke('crypto-proxy', {
+    body: {
+      endpoint: '/global'
+    }
+  });
+  
+  if (error) throw error;
+  return data;
 };
 
 const MarketStats = () => {
