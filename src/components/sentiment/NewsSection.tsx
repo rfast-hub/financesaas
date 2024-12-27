@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NewsItem {
-  id: string;
   title: string;
-  published_at: string;
+  url: string;
+  time_published: string;
+  authors: string[];
+  summary: string;
 }
 
 const fetchCryptoNews = async () => {
@@ -29,7 +31,7 @@ const NewsSection = () => {
   const { data: newsData, isLoading } = useQuery({
     queryKey: ['cryptoNews'],
     queryFn: fetchCryptoNews,
-    refetchInterval: 300000,
+    refetchInterval: 300000, // Refresh every 5 minutes
   });
 
   return (
@@ -51,11 +53,21 @@ const NewsSection = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {newsData?.map((news: NewsItem) => (
-              <div key={news.id} className="border-b border-border pb-3 last:border-0">
-                <p className="text-sm font-medium">{news.title}</p>
+            {newsData?.map((news: NewsItem, index: number) => (
+              <div key={index} className="border-b border-border pb-3 last:border-0">
+                <a 
+                  href={news.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
+                  <p className="text-sm font-medium">{news.title}</p>
+                </a>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(news.published_at).toLocaleDateString()}
+                  {new Date(news.time_published).toLocaleDateString()} by {news.authors?.[0] || 'Unknown'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                  {news.summary}
                 </p>
               </div>
             ))}

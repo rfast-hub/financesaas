@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
+const ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,8 +27,38 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Proxying request to: ${COINGECKO_BASE_URL}${endpoint}`)
+    // Handle Alpha Vantage news endpoint
+    if (endpoint === '/news') {
+      const ALPHA_VANTAGE_API_KEY = Deno.env.get('ALPHA_VANTAGE_API_KEY')
+      console.log('Fetching news from Alpha Vantage')
+      
+      const response = await fetch(
+        `${ALPHA_VANTAGE_BASE_URL}?function=NEWS_SENTIMENT&topics=cryptocurrency&apikey=${ALPHA_VANTAGE_API_KEY}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
+      )
 
+      if (!response.ok) {
+        throw new Error(`Alpha Vantage API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return new Response(
+        JSON.stringify(data.feed || []),
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          } 
+        }
+      )
+    }
+
+    // Handle CoinGecko endpoints
+    console.log(`Proxying request to: ${COINGECKO_BASE_URL}${endpoint}`)
     const response = await fetch(`${COINGECKO_BASE_URL}${endpoint}`, {
       headers: {
         'Accept': 'application/json',
