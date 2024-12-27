@@ -1,6 +1,7 @@
 import MarketStats from "@/components/MarketStats";
 import CryptoChart from "@/components/CryptoChart";
 import CryptoList from "@/components/CryptoList";
+import CryptoChatbot from "@/components/CryptoChatbot";
 
 const Index = () => {
   return (
@@ -24,6 +25,10 @@ const Index = () => {
           <div>
             <CryptoList />
           </div>
+        </div>
+
+        <div className="mt-8">
+          <CryptoChatbot />
         </div>
       </div>
     </div>
