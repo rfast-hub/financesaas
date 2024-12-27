@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -16,7 +17,6 @@ const CryptoChatbot = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const API_KEY = 'YOUR_API_KEY_HERE'; // Replace this with your actual API key
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,35 +28,16 @@ const CryptoChatbot = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://api.perplexity.ai/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.1-sonar-large-128k-online',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a cryptocurrency expert assistant. Provide accurate information about cryptocurrencies, market analysis, and price predictions. Always include relevant market data and technical analysis in your responses. Be precise and concise.'
-            },
-            {
-              role: 'user',
-              content: userMessage
-            }
-          ],
-          temperature: 0.2,
-          max_tokens: 1000,
-        }),
+      const { data, error } = await supabase.functions.invoke('chat', {
+        body: { message: userMessage },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
+      if (error) throw error;
 
-      const data = await response.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.choices[0].message.content 
+      }]);
     } catch (error) {
       toast({
         title: "Error",
