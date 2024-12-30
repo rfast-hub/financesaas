@@ -9,6 +9,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -55,19 +56,55 @@ const Login = () => {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Password reset failed",
+          description: error.message,
+        });
+        return;
+      }
+
+      toast({
+        title: "Check your email",
+        description: "We've sent you a password reset link.",
+      });
+      setResetMode(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Password reset failed",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-8 p-8 bg-card rounded-lg shadow-lg">
         <div className="text-center">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Crypto Dashboard Login
+            {resetMode ? "Reset Password" : "Crypto Dashboard Login"}
           </h2>
           <p className="mt-2 text-muted-foreground">
-            Please sign in to access the platform
+            {resetMode 
+              ? "Enter your email to receive a reset link" 
+              : "Please sign in to access the platform"}
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="mt-8 space-y-6">
+        <form onSubmit={resetMode ? handleResetPassword : handleLogin} className="mt-8 space-y-6">
           <div className="space-y-4">
             <div>
               <Input
@@ -78,15 +115,17 @@ const Login = () => {
                 required
               />
             </div>
-            <div>
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            {!resetMode && (
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            )}
           </div>
 
           <Button
@@ -94,8 +133,20 @@ const Login = () => {
             className="w-full"
             disabled={loading}
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading 
+              ? (resetMode ? "Sending..." : "Signing in...") 
+              : (resetMode ? "Send Reset Link" : "Sign in")}
           </Button>
+
+          <div className="text-center mt-4">
+            <button
+              type="button"
+              onClick={() => setResetMode(!resetMode)}
+              className="text-sm text-primary hover:underline"
+            >
+              {resetMode ? "Back to login" : "Forgot password?"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
