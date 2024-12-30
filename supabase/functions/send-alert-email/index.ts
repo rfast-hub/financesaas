@@ -22,13 +22,13 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Received email request")
-    const emailRequest: EmailRequest = await req.json()
-    console.log("Email request data:", emailRequest)
-
     if (!RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not set")
+      console.error("RESEND_API_KEY is not set")
+      throw new Error("RESEND_API_KEY is not configured")
     }
+
+    const emailRequest: EmailRequest = await req.json()
+    console.log("Received email request:", emailRequest)
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -52,26 +52,27 @@ serve(async (req) => {
       }),
     })
 
-    if (res.ok) {
-      const data = await res.json()
-      console.log("Email sent successfully:", data)
-      return new Response(JSON.stringify(data), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    } else {
+    if (!res.ok) {
       const error = await res.text()
       console.error("Error from Resend API:", error)
-      return new Response(JSON.stringify({ error }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      throw new Error(`Failed to send email: ${error}`)
     }
-  } catch (error: any) {
-    console.error("Error in send-alert-email function:", error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+
+    const data = await res.json()
+    console.log("Email sent successfully:", data)
+
+    return new Response(JSON.stringify(data), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
+  } catch (error) {
+    console.error("Error in send-alert-email function:", error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    )
   }
 })
