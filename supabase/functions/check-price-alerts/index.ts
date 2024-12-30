@@ -21,12 +21,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('Starting price alerts check...')
+    
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Fetch active price alerts and user emails
+    // Fetch active price alerts
     const { data: alerts, error: alertsError } = await supabase
       .from('price_alerts')
       .select(`
@@ -38,39 +40,65 @@ Deno.serve(async (req) => {
       .eq('is_active', true)
       .is('triggered_at', null)
 
-    if (alertsError) throw alertsError
+    if (alertsError) {
+      console.error('Error fetching alerts:', alertsError)
+      throw alertsError
+    }
 
-    // Fetch current prices from CoinGecko
-    const symbols = [...new Set(alerts?.map((alert: PriceAlert) => alert.cryptocurrency.toLowerCase()))]
-    if (symbols.length === 0) {
+    console.log(`Found ${alerts?.length || 0} active alerts`)
+
+    if (!alerts?.length) {
       return new Response(
         JSON.stringify({ message: 'No active alerts' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    // Get unique cryptocurrencies to fetch
+    const cryptos = [...new Set(alerts.map(alert => alert.cryptocurrency.toLowerCase()))]
+    
+    // Fetch current prices from CoinGecko
     const pricesResponse = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${symbols.join(',')}&vs_currencies=usd`
+      `https://api.coingecko.com/api/v3/simple/price?ids=${cryptos.join(',')}&vs_currencies=usd`
     )
+    
+    if (!pricesResponse.ok) {
+      console.error('Error fetching prices:', await pricesResponse.text())
+      throw new Error('Failed to fetch current prices')
+    }
+
     const prices = await pricesResponse.json()
+    console.log('Current prices:', prices)
 
     // Check alerts against current prices
     const triggeredAlerts: PriceAlert[] = []
-    for (const alert of alerts || []) {
+    
+    for (const alert of alerts) {
       const currentPrice = prices[alert.cryptocurrency.toLowerCase()]?.usd
-      if (!currentPrice) continue
+      
+      if (!currentPrice) {
+        console.log(`No price found for ${alert.cryptocurrency}`)
+        continue
+      }
+
+      console.log(`Checking alert for ${alert.cryptocurrency}:`, {
+        currentPrice,
+        targetPrice: alert.target_price,
+        condition: alert.condition
+      })
 
       const isTriggered = 
         (alert.condition === 'above' && currentPrice >= alert.target_price) ||
         (alert.condition === 'below' && currentPrice <= alert.target_price)
 
       if (isTriggered) {
+        console.log(`Alert triggered for ${alert.cryptocurrency}`)
         triggeredAlerts.push(alert)
         
         // Send email notification
         if (alert.email_notification && alert.users?.email) {
           try {
-            await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-alert-email`, {
+            const emailResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-alert-email`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -83,34 +111,48 @@ Deno.serve(async (req) => {
                 targetPrice: alert.target_price,
                 currentPrice,
               }),
-            });
+            })
+
+            if (!emailResponse.ok) {
+              console.error('Error sending email:', await emailResponse.text())
+            } else {
+              console.log('Email notification sent successfully')
+            }
           } catch (error) {
-            console.error('Error sending email notification:', error);
+            console.error('Error sending email notification:', error)
           }
         }
       }
     }
 
-    // Update triggered alerts
+    // Update triggered alerts in database
     if (triggeredAlerts.length > 0) {
       const { error: updateError } = await supabase
         .from('price_alerts')
-        .update({ triggered_at: new Date().toISOString(), is_active: false })
+        .update({ 
+          triggered_at: new Date().toISOString(), 
+          is_active: false 
+        })
         .in('id', triggeredAlerts.map(alert => alert.id))
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error('Error updating triggered alerts:', updateError)
+        throw updateError
+      }
+
+      console.log(`Updated ${triggeredAlerts.length} triggered alerts`)
     }
 
     return new Response(
       JSON.stringify({ 
-        message: `Checked ${alerts?.length} alerts, ${triggeredAlerts.length} triggered`,
+        message: `Checked ${alerts.length} alerts, ${triggeredAlerts.length} triggered`,
         triggeredAlerts 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error in check-price-alerts:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
