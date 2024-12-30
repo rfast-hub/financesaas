@@ -42,19 +42,38 @@ serve(async (req) => {
       )
 
       if (!response.ok) {
+        console.error('Alpha Vantage API error:', response.status)
         throw new Error(`Alpha Vantage API error: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log('Alpha Vantage response:', JSON.stringify(data).slice(0, 200)) // Log first 200 chars of response
-      
-      if (!data.feed || !Array.isArray(data.feed)) {
+      console.log('Alpha Vantage raw response:', data)
+
+      // Check if we have the expected feed property
+      if (!data || typeof data !== 'object') {
         console.error('Unexpected response format:', data)
         throw new Error('Invalid response format from Alpha Vantage')
       }
 
+      // Extract items from either feed or items property
+      const newsItems = data.feed || data.items || []
+      
+      if (!Array.isArray(newsItems)) {
+        console.error('News items is not an array:', newsItems)
+        throw new Error('Invalid news items format from Alpha Vantage')
+      }
+
+      // Transform and clean up the news items
+      const processedNews = newsItems.slice(0, 5).map(item => ({
+        title: item.title || '',
+        url: item.url || '',
+        time_published: item.time_published || new Date().toISOString(),
+        authors: Array.isArray(item.authors) ? item.authors : [item.authors || 'Unknown'],
+        summary: item.summary || ''
+      }))
+
       return new Response(
-        JSON.stringify(data.feed.slice(0, 5)),
+        JSON.stringify(processedNews),
         { 
           headers: { 
             ...corsHeaders,
