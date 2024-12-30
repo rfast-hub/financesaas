@@ -13,6 +13,7 @@ interface NewsItem {
 
 const fetchCryptoNews = async () => {
   try {
+    console.log('Fetching crypto news...');
     const { data, error } = await supabase.functions.invoke('crypto-proxy', {
       body: {
         endpoint: '/news'
@@ -24,14 +25,26 @@ const fetchCryptoNews = async () => {
       throw error;
     }
 
-    if (!data || !Array.isArray(data)) {
+    console.log('Raw news data:', data);
+
+    if (!data) {
+      console.error('No data received from news endpoint');
+      throw new Error('No news data available');
+    }
+
+    if (!Array.isArray(data)) {
       console.error('Invalid news data format:', data);
       throw new Error('Invalid news data format');
     }
 
+    if (data.length === 0) {
+      console.log('News array is empty');
+      throw new Error('No news articles available');
+    }
+
     return data;
   } catch (error) {
-    console.error('Error fetching crypto news:', error);
+    console.error('Error in fetchCryptoNews:', error);
     throw error;
   }
 };
@@ -41,10 +54,22 @@ const NewsSection = () => {
     queryKey: ['cryptoNews'],
     queryFn: fetchCryptoNews,
     refetchInterval: 300000, // Refresh every 5 minutes
+    retry: 3, // Retry failed requests 3 times
   });
 
   if (error) {
     console.error('News fetch error:', error);
+    return (
+      <div className="mt-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Newspaper className="w-5 h-5" />
+          <h3 className="text-lg font-semibold">Latest Crypto News</h3>
+        </div>
+        <div className="text-center text-muted-foreground py-4">
+          Unable to load news at the moment. Please try again later.
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -54,7 +79,7 @@ const NewsSection = () => {
         <h3 className="text-lg font-semibold">Latest Crypto News</h3>
       </div>
       
-      <ScrollArea className="h-[1000px]">
+      <ScrollArea className="h-[400px]">
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -87,7 +112,7 @@ const NewsSection = () => {
           </div>
         ) : (
           <div className="text-center text-muted-foreground py-4">
-            No news available at the moment
+            No news available at the moment. Please check back later.
           </div>
         )}
       </ScrollArea>
