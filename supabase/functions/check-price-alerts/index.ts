@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Fetch active price alerts
+    // Fetch active price alerts with user email
     const { data: alerts, error: alertsError } = await supabase
       .from('price_alerts')
       .select(`
@@ -102,11 +102,11 @@ Deno.serve(async (req) => {
         if (alert.email_notification && alert.users?.email) {
           try {
             console.log('Sending email notification to:', alert.users.email)
-            const emailResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-alert-email`, {
+            const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-alert-email`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+                'Authorization': `Bearer ${supabaseKey}`,
               },
               body: JSON.stringify({
                 to: [alert.users.email],
