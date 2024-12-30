@@ -1,0 +1,7 @@
+project_id = "szxbgwsxosazuvkxlmdx"
+
+[check-price-alerts]
+verify_jwt = false
+
+[send-alert-email]
+verify_jwt = false

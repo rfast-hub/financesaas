@@ -13,6 +13,9 @@ interface PriceAlert {
   condition: 'above' | 'below'
   is_active: boolean
   email_notification: boolean
+  users: {
+    email: string
+  }
 }
 
 Deno.serve(async (req) => {
@@ -98,6 +101,7 @@ Deno.serve(async (req) => {
         // Send email notification
         if (alert.email_notification && alert.users?.email) {
           try {
+            console.log('Sending email notification to:', alert.users.email)
             const emailResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-alert-email`, {
               method: 'POST',
               headers: {
