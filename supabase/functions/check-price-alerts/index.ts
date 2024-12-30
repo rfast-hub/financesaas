@@ -26,10 +26,15 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Fetch active price alerts
+    // Fetch active price alerts and user emails
     const { data: alerts, error: alertsError } = await supabase
       .from('price_alerts')
-      .select('*')
+      .select(`
+        *,
+        users:user_id (
+          email
+        )
+      `)
       .eq('is_active', true)
       .is('triggered_at', null)
 
@@ -51,9 +56,9 @@ Deno.serve(async (req) => {
 
     // Check alerts against current prices
     const triggeredAlerts: PriceAlert[] = []
-    alerts?.forEach((alert: PriceAlert) => {
+    for (const alert of alerts || []) {
       const currentPrice = prices[alert.cryptocurrency.toLowerCase()]?.usd
-      if (!currentPrice) return
+      if (!currentPrice) continue
 
       const isTriggered = 
         (alert.condition === 'above' && currentPrice >= alert.target_price) ||
@@ -61,8 +66,30 @@ Deno.serve(async (req) => {
 
       if (isTriggered) {
         triggeredAlerts.push(alert)
+        
+        // Send email notification
+        if (alert.email_notification && alert.users?.email) {
+          try {
+            await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-alert-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+              },
+              body: JSON.stringify({
+                to: [alert.users.email],
+                cryptocurrency: alert.cryptocurrency,
+                condition: alert.condition,
+                targetPrice: alert.target_price,
+                currentPrice,
+              }),
+            });
+          } catch (error) {
+            console.error('Error sending email notification:', error);
+          }
+        }
       }
-    })
+    }
 
     // Update triggered alerts
     if (triggeredAlerts.length > 0) {
@@ -72,10 +99,6 @@ Deno.serve(async (req) => {
         .in('id', triggeredAlerts.map(alert => alert.id))
 
       if (updateError) throw updateError
-
-      // Here you would typically send notifications (email, push, etc.)
-      // For now, we'll just log the triggered alerts
-      console.log('Triggered alerts:', triggeredAlerts)
     }
 
     return new Response(
