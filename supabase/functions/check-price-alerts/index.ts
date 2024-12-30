@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       throw alertsError
     }
 
-    console.log(`Found ${alerts?.length || 0} active alerts`)
+    console.log(`Found ${alerts?.length || 0} active alerts:`, alerts)
 
     if (!alerts?.length) {
       return new Response(
@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
 
     // Get unique cryptocurrencies to fetch
     const cryptos = [...new Set(alerts.map(alert => alert.cryptocurrency.toLowerCase()))]
+    console.log('Fetching prices for cryptocurrencies:', cryptos)
     
     // Fetch current prices from CoinGecko
     const pricesResponse = await fetch(
@@ -65,7 +66,8 @@ Deno.serve(async (req) => {
     )
     
     if (!pricesResponse.ok) {
-      console.error('Error fetching prices:', await pricesResponse.text())
+      const errorText = await pricesResponse.text()
+      console.error('Error fetching prices:', errorText)
       throw new Error('Failed to fetch current prices')
     }
 
@@ -116,8 +118,11 @@ Deno.serve(async (req) => {
               }),
             })
 
+            const emailResult = await emailResponse.text()
+            console.log('Email notification response:', emailResult)
+
             if (!emailResponse.ok) {
-              console.error('Error sending email:', await emailResponse.text())
+              console.error('Error sending email:', emailResult)
             } else {
               console.log('Email notification sent successfully')
             }
