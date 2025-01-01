@@ -16,7 +16,7 @@ const SubscriptionManagement = () => {
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -66,7 +66,14 @@ const SubscriptionManagement = () => {
   }
 
   if (!subscription) {
-    return null;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>No Active Subscription</CardTitle>
+          <CardDescription>You currently don't have an active subscription.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return (

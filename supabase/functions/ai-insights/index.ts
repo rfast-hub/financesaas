@@ -8,27 +8,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const getPromptForAnalysisType = (type: string) => {
-  switch (type) {
-    case 'prediction':
-      return 'Analyze current market conditions and provide a detailed price prediction for Bitcoin over the next 24-48 hours. Include key support and resistance levels.';
-    case 'strategy':
-      return 'Based on current market conditions, suggest specific trading strategies for Bitcoin. Include entry points, exit targets, and stop-loss levels.';
-    case 'risk':
-      return 'Provide a comprehensive risk assessment for Bitcoin trading in the current market. Include volatility analysis and potential market risks.';
-    case 'trend':
-      return 'Analyze current market trends for Bitcoin, including technical indicators, market sentiment, and potential trend reversals.';
-    default:
-      return 'Analyze the current Bitcoin market conditions and provide insights.';
-  }
-};
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      headers: corsHeaders 
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -80,12 +63,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ content: data.choices[0].message.content }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -98,11 +76,23 @@ serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
 });
+
+function getPromptForAnalysisType(type: string) {
+  switch (type) {
+    case 'prediction':
+      return 'Analyze current market conditions and provide a detailed price prediction for Bitcoin over the next 24-48 hours. Include key support and resistance levels.';
+    case 'strategy':
+      return 'Based on current market conditions, suggest specific trading strategies for Bitcoin. Include entry points, exit targets, and stop-loss levels.';
+    case 'risk':
+      return 'Provide a comprehensive risk assessment for Bitcoin trading in the current market. Include volatility analysis and potential market risks.';
+    case 'trend':
+      return 'Analyze current market trends for Bitcoin, including technical indicators, market sentiment, and potential trend reversals.';
+    default:
+      return 'Analyze the current Bitcoin market conditions and provide insights.';
+  }
+}
