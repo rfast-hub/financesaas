@@ -5,6 +5,7 @@ import CryptoChatbot from "@/components/CryptoChatbot";
 import PriceAlerts from "@/components/PriceAlerts";
 import MarketSentiment from "@/components/MarketSentiment";
 import AIInsights from "@/components/AIInsights";
+import SubscriptionManagement from "@/components/SubscriptionManagement";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +58,8 @@ const Index = () => {
         </div>
 
         <PriceAlerts />
+
+        <SubscriptionManagement />
 
         <div className="mt-8">
           <CryptoChatbot />

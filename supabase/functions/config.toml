@@ -2,3 +2,6 @@ project_id = "szxbgwsxosazuvkxlmdx"
 
 [ai-insights]
 verify_jwt = false
+
+[cancel-subscription]
+verify_jwt = false
