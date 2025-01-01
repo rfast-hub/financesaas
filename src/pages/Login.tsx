@@ -13,8 +13,34 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate email format
+    if (!validateEmail(email)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+      });
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      toast({
+        variant: "destructive",
+        title: "Invalid password",
+        description: "Password must be at least 6 characters long.",
+      });
+      return;
+    }
+
     setLoading(true);
     
     try {
@@ -24,7 +50,13 @@ const Login = () => {
       });
 
       if (error) {
-        if (error.message.includes("Email not confirmed")) {
+        if (error.message.includes("Invalid login credentials")) {
+          toast({
+            variant: "destructive",
+            title: "Login failed",
+            description: "Invalid email or password. Please try again.",
+          });
+        } else if (error.message.includes("Email not confirmed")) {
           toast({
             variant: "destructive",
             title: "Email not confirmed",
@@ -46,10 +78,11 @@ const Login = () => {
         description: "Successfully logged in.",
       });
     } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -58,6 +91,16 @@ const Login = () => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateEmail(email)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -80,10 +123,11 @@ const Login = () => {
       });
       setResetMode(false);
     } catch (error: any) {
+      console.error("Reset password error:", error);
       toast({
         variant: "destructive",
         title: "Password reset failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -113,6 +157,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="w-full"
               />
             </div>
             {!resetMode && (
@@ -123,6 +168,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  className="w-full"
                 />
               </div>
             )}

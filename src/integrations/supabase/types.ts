@@ -45,6 +45,36 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          canceled_at: string | null
+          created_at: string | null
+          current_period_end: string | null
+          id: string
+          status: string
+          subscription_id: string | null
+          user_id: string
+        }
+        Insert: {
+          canceled_at?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          id?: string
+          status: string
+          subscription_id?: string | null
+          user_id: string
+        }
+        Update: {
+          canceled_at?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          id?: string
+          status?: string
+          subscription_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
