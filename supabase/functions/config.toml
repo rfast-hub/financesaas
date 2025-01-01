@@ -1,7 +1,4 @@
 project_id = "szxbgwsxosazuvkxlmdx"
 
-[check-price-alerts]
-verify_jwt = false
-
-[send-alert-email]
+[ai-insights]
 verify_jwt = false
