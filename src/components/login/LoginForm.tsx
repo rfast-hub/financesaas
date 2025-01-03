@@ -44,11 +44,7 @@ export const LoginForm = () => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-        options: {
-          // Set session timeout to 4 hours
-          expiresIn: 14400
-        }
+        password
       });
 
       if (error) {
@@ -59,6 +55,13 @@ export const LoginForm = () => {
         });
         return;
       }
+
+      // Set session expiration to 4 hours (14400 seconds)
+      await supabase.auth.setSession({
+        access_token: (await supabase.auth.getSession()).data.session?.access_token || '',
+        refresh_token: (await supabase.auth.getSession()).data.session?.refresh_token || '',
+        expires_in: 14400
+      });
 
       navigate("/");
       toast({
