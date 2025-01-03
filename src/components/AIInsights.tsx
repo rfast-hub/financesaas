@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Brain, TrendingUp, ShieldAlert, LineChart } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { getErrorMessage } from "@/utils/errorHandling";
 
 interface AIResponse {
   content: string;
@@ -31,32 +32,18 @@ const AIInsights = () => {
         return data as AIResponse;
       } catch (error: any) {
         console.error('Error in AI insights query:', error);
-        
-        // Check if it's a network error
-        if (error.message === 'Failed to fetch') {
-          throw new Error('Network error. Please check your connection and try again.');
-        }
-        
-        // Check if it's a rate limit error
-        if (error.status === 429) {
-          throw new Error('Too many requests. Please try again in a few minutes.');
-        }
-        
-        throw error;
+        throw new Error(getErrorMessage(error));
       }
     },
     retry: (failureCount, error: any) => {
-      // Don't retry on rate limits
-      if (error?.status === 429) return false;
-      // Retry up to 3 times for other errors
-      return failureCount < 3;
+      return !isRateLimitError(error) && failureCount < 3;
     },
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 30000),
     meta: {
       onError: (error: Error) => {
         toast({
           title: "Error",
-          description: error.message || "Failed to fetch AI insights. Please try again later.",
+          description: error.message,
           variant: "destructive",
         });
       },
@@ -74,7 +61,7 @@ const AIInsights = () => {
 
     if (error) {
       return <div className="text-destructive flex items-center justify-center p-4">
-        <p className="text-center">{error.message || 'Failed to load insights. Please try again later.'}</p>
+        <p className="text-center">{error.message}</p>
       </div>;
     }
 

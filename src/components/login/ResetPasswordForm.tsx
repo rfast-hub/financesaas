@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { extractWaitTime, isRateLimitError } from "@/utils/errorHandling";
+import { useCooldown } from "@/hooks/useCooldown";
 
 interface ResetPasswordFormProps {
   onBack: () => void;
@@ -11,15 +13,14 @@ interface ResetPasswordFormProps {
 export const ResetPasswordForm = ({ onBack }: ResetPasswordFormProps) => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const { cooldownSeconds, startCooldown, isInCooldown } = useCooldown();
   const { toast } = useToast();
 
   const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
   };
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateEmail(email)) {
@@ -31,7 +32,7 @@ export const ResetPasswordForm = ({ onBack }: ResetPasswordFormProps) => {
       return;
     }
 
-    if (cooldownSeconds > 0) {
+    if (isInCooldown) {
       toast({
         variant: "destructive",
         title: "Please wait",
@@ -48,22 +49,10 @@ export const ResetPasswordForm = ({ onBack }: ResetPasswordFormProps) => {
       });
 
       if (error) {
-        if (error.message.includes('rate_limit')) {
-          // Extract the wait time from error message
-          const waitTime = error.message.match(/\d+/)?.[0] || '60';
-          setCooldownSeconds(parseInt(waitTime));
+        if (isRateLimitError(error)) {
+          const waitTime = extractWaitTime(error.message);
+          startCooldown(waitTime);
           
-          // Start countdown
-          const interval = setInterval(() => {
-            setCooldownSeconds((prev) => {
-              if (prev <= 1) {
-                clearInterval(interval);
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-
           toast({
             variant: "destructive",
             title: "Too many requests",
@@ -84,13 +73,11 @@ export const ResetPasswordForm = ({ onBack }: ResetPasswordFormProps) => {
         title: "Check your email",
         description: "We've sent you a password reset link.",
       });
-      onBack();
     } catch (error: any) {
-      console.error("Reset password error:", error);
       toast({
         variant: "destructive",
-        title: "Password reset failed",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again later.",
       });
     } finally {
       setLoading(false);
@@ -98,35 +85,29 @@ export const ResetPasswordForm = ({ onBack }: ResetPasswordFormProps) => {
   };
 
   return (
-    <form onSubmit={handleResetPassword} className="mt-8 space-y-6">
-      <div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
         <Input
           type="email"
-          placeholder="Email address"
+          placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full"
-          autoComplete="email"
+          disabled={loading || isInCooldown}
         />
       </div>
 
       <Button
         type="submit"
         className="w-full"
-        disabled={loading || cooldownSeconds > 0}
+        disabled={loading || isInCooldown}
       >
-        {loading ? "Sending..." : cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : "Send Reset Link"}
+        {loading ? "Sending..." : isInCooldown ? `Wait ${cooldownSeconds}s` : "Send Reset Link"}
       </Button>
 
       <div className="text-center mt-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-sm text-primary hover:underline"
-        >
-          Back to login
-        </button>
+        <Button variant="link" onClick={onBack} type="button">
+          Back to Login
+        </Button>
       </div>
     </form>
   );
