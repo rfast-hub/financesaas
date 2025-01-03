@@ -25,22 +25,42 @@ const AIInsights = () => {
 
         if (error) {
           console.error('Supabase function error:', error);
-          throw error;
+          throw new Error(error.message || 'Failed to fetch AI insights');
         }
 
         return data as AIResponse;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error in AI insights query:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch AI insights. Please try again later.",
-          variant: "destructive",
-        });
+        
+        // Check if it's a network error
+        if (error.message === 'Failed to fetch') {
+          throw new Error('Network error. Please check your connection and try again.');
+        }
+        
+        // Check if it's a rate limit error
+        if (error.status === 429) {
+          throw new Error('Too many requests. Please try again in a few minutes.');
+        }
+        
         throw error;
       }
     },
-    retry: 1,
-    retryDelay: 1000,
+    retry: (failureCount, error: any) => {
+      // Don't retry on rate limits
+      if (error?.status === 429) return false;
+      // Retry up to 3 times for other errors
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 30000),
+    meta: {
+      onError: (error: Error) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch AI insights. Please try again later.",
+          variant: "destructive",
+        });
+      },
+    },
   });
 
   const renderContent = (content: string | undefined) => {
@@ -53,8 +73,8 @@ const AIInsights = () => {
     }
 
     if (error) {
-      return <div className="text-destructive">
-        Failed to load insights. Please try again later.
+      return <div className="text-destructive flex items-center justify-center p-4">
+        <p className="text-center">{error.message || 'Failed to load insights. Please try again later.'}</p>
       </div>;
     }
 

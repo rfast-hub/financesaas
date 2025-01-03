@@ -11,6 +11,7 @@ interface ResetPasswordFormProps {
 export const ResetPasswordForm = ({ onBack }: ResetPasswordFormProps) => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const { toast } = useToast();
 
   const validateEmail = (email: string) => {
@@ -30,6 +31,15 @@ export const ResetPasswordForm = ({ onBack }: ResetPasswordFormProps) => {
       return;
     }
 
+    if (cooldownSeconds > 0) {
+      toast({
+        variant: "destructive",
+        title: "Please wait",
+        description: `You can request another reset in ${cooldownSeconds} seconds.`,
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -38,6 +48,30 @@ export const ResetPasswordForm = ({ onBack }: ResetPasswordFormProps) => {
       });
 
       if (error) {
+        if (error.message.includes('rate_limit')) {
+          // Extract the wait time from error message
+          const waitTime = error.message.match(/\d+/)?.[0] || '60';
+          setCooldownSeconds(parseInt(waitTime));
+          
+          // Start countdown
+          const interval = setInterval(() => {
+            setCooldownSeconds((prev) => {
+              if (prev <= 1) {
+                clearInterval(interval);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+
+          toast({
+            variant: "destructive",
+            title: "Too many requests",
+            description: `Please wait ${waitTime} seconds before requesting another reset.`,
+          });
+          return;
+        }
+
         toast({
           variant: "destructive",
           title: "Password reset failed",
@@ -80,9 +114,9 @@ export const ResetPasswordForm = ({ onBack }: ResetPasswordFormProps) => {
       <Button
         type="submit"
         className="w-full"
-        disabled={loading}
+        disabled={loading || cooldownSeconds > 0}
       >
-        {loading ? "Sending..." : "Send Reset Link"}
+        {loading ? "Sending..." : cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : "Send Reset Link"}
       </Button>
 
       <div className="text-center mt-4">
