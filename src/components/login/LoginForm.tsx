@@ -42,7 +42,7 @@ export const LoginForm = () => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: { session }, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
@@ -56,18 +56,19 @@ export const LoginForm = () => {
         return;
       }
 
-      // Set session expiration to 4 hours (14400 seconds)
-      await supabase.auth.setSession({
-        access_token: (await supabase.auth.getSession()).data.session?.access_token || '',
-        refresh_token: (await supabase.auth.getSession()).data.session?.refresh_token || '',
-        expires_in: 14400
-      });
+      if (session) {
+        // Set session with the tokens from the successful login
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token
+        });
 
-      navigate("/");
-      toast({
-        title: "Welcome back!",
-        description: "Successfully logged in.",
-      });
+        navigate("/");
+        toast({
+          title: "Welcome back!",
+          description: "Successfully logged in.",
+        });
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
