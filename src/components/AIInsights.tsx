@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Brain, TrendingUp, ShieldAlert, LineChart } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { getErrorMessage } from "@/utils/errorHandling";
+import { getErrorMessage, isRateLimitError } from "@/utils/errorHandling";
 
 interface AIResponse {
   content: string;
