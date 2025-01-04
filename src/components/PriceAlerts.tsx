@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,20 @@ const PriceAlerts = () => {
   const [cryptocurrency, setCryptocurrency] = useState("BTC");
   const [targetPrice, setTargetPrice] = useState("");
   const [condition, setCondition] = useState("above");
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get current user's ID
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id);
+      }
+    });
+  }, []);
 
   // Fetch existing alerts
   const { data: alerts, refetch } = useQuery({
-    queryKey: ["price-alerts"],
+    queryKey: ["price-alerts", userId],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
@@ -35,6 +45,7 @@ const PriceAlerts = () => {
       if (error) throw error;
       return data;
     },
+    enabled: !!userId, // Only run query when userId is available
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

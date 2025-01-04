@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +17,20 @@ const CryptoChatbot = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get current user's ID
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id);
+      }
+    });
+  }, []);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || !userId) return;
 
     const userMessage = input.trim();
     setInput('');
@@ -29,7 +39,10 @@ const CryptoChatbot = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('chat', {
-        body: { message: userMessage },
+        body: { 
+          message: userMessage,
+          userId: userId // Include userId in the request
+        },
       });
 
       if (error) throw error;
