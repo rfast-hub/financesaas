@@ -22,14 +22,26 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Initialize session from localStorage if available
+    const storedSession = localStorage.getItem('supabase.auth.token');
+    if (storedSession) {
+      setSession(true);
+    }
+
     // Check current session
     const checkSession = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         setSession(!!currentSession);
+        if (currentSession) {
+          localStorage.setItem('supabase.auth.token', 'true');
+        } else {
+          localStorage.removeItem('supabase.auth.token');
+        }
       } catch (error) {
         console.error("Session check error:", error);
         setSession(false);
+        localStorage.removeItem('supabase.auth.token');
       } finally {
         setLoading(false);
       }
@@ -43,6 +55,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(!!session);
       setLoading(false);
+      if (session) {
+        localStorage.setItem('supabase.auth.token', 'true');
+      } else {
+        localStorage.removeItem('supabase.auth.token');
+      }
     });
 
     return () => {
@@ -52,7 +69,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Show loading state
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>;
   }
 
   // Redirect to login if no session
