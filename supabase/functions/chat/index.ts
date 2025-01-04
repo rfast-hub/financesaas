@@ -15,9 +15,13 @@ serve(async (req) => {
   }
 
   try {
-    const { message } = await req.json();
+    const { message, userId } = await req.json();
 
-    console.log('Received message:', message);
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    console.log('Received message from user:', userId);
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -47,7 +51,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('Perplexity API response:', data);
+    console.log('Perplexity API response for user:', userId);
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
