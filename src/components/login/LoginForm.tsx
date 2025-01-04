@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -11,7 +11,6 @@ export const LoginForm = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,6 +41,11 @@ export const LoginForm = () => {
     setLoading(true);
     
     try {
+      // First, ensure any existing session is cleared
+      await supabase.auth.signOut();
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Attempt to sign in
       const { data: { session }, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -51,19 +55,24 @@ export const LoginForm = () => {
         toast({
           variant: "destructive",
           title: "Authentication error",
-          description: "Invalid credentials. Please try again.",
+          description: error.message || "Invalid credentials. Please try again.",
         });
         return;
       }
 
       if (session) {
+        // Store session data
+        localStorage.setItem('supabase.auth.token', session.access_token);
+        
         // Set session with the tokens from the successful login
         await supabase.auth.setSession({
           access_token: session.access_token,
           refresh_token: session.refresh_token
         });
 
+        // Navigate to home page
         navigate("/");
+        
         toast({
           title: "Welcome back!",
           description: "Successfully logged in.",
