@@ -19,10 +19,20 @@ export const AlertList = ({ alerts, onDelete }: AlertListProps) => {
 
   const handleDeleteAlert = async (id: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to delete alerts",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("price_alerts")
         .delete()
-        .match({ id });
+        .match({ id, user_id: user.id }); // Ensure we only delete user's own alerts
 
       if (error) throw error;
 

@@ -21,9 +21,11 @@ export const AlertForm = ({ onSuccess }: AlertFormProps) => {
   const [cryptocurrency, setCryptocurrency] = useState("BTC");
   const [targetPrice, setTargetPrice] = useState("");
   const [condition, setCondition] = useState("above");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -58,6 +60,8 @@ export const AlertForm = ({ onSuccess }: AlertFormProps) => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -69,6 +73,7 @@ export const AlertForm = ({ onSuccess }: AlertFormProps) => {
           <Select
             value={cryptocurrency}
             onValueChange={setCryptocurrency}
+            disabled={isSubmitting}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select cryptocurrency" />
@@ -88,6 +93,7 @@ export const AlertForm = ({ onSuccess }: AlertFormProps) => {
           <Select
             value={condition}
             onValueChange={setCondition}
+            disabled={isSubmitting}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select condition" />
@@ -109,12 +115,13 @@ export const AlertForm = ({ onSuccess }: AlertFormProps) => {
             onChange={(e) => setTargetPrice(e.target.value)}
             placeholder="Enter target price"
             required
+            disabled={isSubmitting}
           />
         </div>
       </div>
 
-      <Button type="submit" className="w-full">
-        Create Alert
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Creating Alert..." : "Create Alert"}
       </Button>
     </form>
   );
