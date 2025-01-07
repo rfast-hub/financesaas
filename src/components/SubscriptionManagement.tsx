@@ -5,17 +5,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 const SubscriptionManagement = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const { data: subscription, isLoading: isLoadingSubscription, error, refetch } = useQuery({
     queryKey: ['subscription'],
     queryFn: async () => {
       console.log('Fetching subscription data...');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log('No session found, redirecting to login...');
+        navigate('/login');
+        return null;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user found');
+      if (!user) {
+        console.log('No authenticated user found, redirecting to login...');
+        navigate('/login');
+        return null;
+      }
 
       const { data, error } = await supabase
         .from('subscriptions')
@@ -25,19 +39,44 @@ const SubscriptionManagement = () => {
       
       if (error) {
         console.error('Subscription fetch error:', error);
+        if (error.code === 'PGRST301' || error.message.includes('JWT')) {
+          navigate('/login');
+          return null;
+        }
         throw error;
       }
       
       console.log('Subscription data:', data);
       return data;
     },
+    retry: 1,
   });
 
   const handleCancelSubscription = async () => {
     try {
       setIsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Please log in again to continue.",
+        });
+        navigate('/login');
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user found');
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Authentication error. Please log in again.",
+        });
+        navigate('/login');
+        return;
+      }
 
       const { error } = await supabase
         .from('subscriptions')
@@ -47,9 +86,15 @@ const SubscriptionManagement = () => {
         })
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST301' || error.message.includes('JWT')) {
+          navigate('/login');
+          return;
+        }
+        throw error;
+      }
 
-      await refetch(); // Refresh the subscription data
+      await refetch();
 
       toast({
         title: "Subscription cancelled",
