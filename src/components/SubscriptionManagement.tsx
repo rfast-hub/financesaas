@@ -10,15 +10,25 @@ const SubscriptionManagement = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: subscription, isLoading: isLoadingSubscription } = useQuery({
+  const { data: subscription, isLoading: isLoadingSubscription, error } = useQuery({
     queryKey: ['subscription'],
     queryFn: async () => {
+      console.log('Fetching subscription data...');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user found');
+
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
+        .eq('user_id', user.id)
         .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Subscription fetch error:', error);
+        throw error;
+      }
+      
+      console.log('Subscription data:', data);
       return data;
     },
   });
@@ -54,6 +64,18 @@ const SubscriptionManagement = () => {
     }
   };
 
+  if (error) {
+    console.error('Subscription query error:', error);
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Error Loading Subscription</CardTitle>
+          <CardDescription>Failed to load subscription details. Please try again later.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   if (isLoadingSubscription) {
     return (
       <Card>
@@ -66,6 +88,7 @@ const SubscriptionManagement = () => {
   }
 
   if (!subscription) {
+    console.log('No subscription found');
     return (
       <Card>
         <CardHeader>
