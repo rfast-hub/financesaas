@@ -87,18 +87,6 @@ const SubscriptionManagement = () => {
     );
   }
 
-  if (!subscription) {
-    console.log('No subscription found');
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>No Active Subscription</CardTitle>
-          <CardDescription>You currently don't have an active subscription.</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -108,14 +96,16 @@ const SubscriptionManagement = () => {
       <CardContent>
         <div className="space-y-4">
           <div>
-            <p className="text-sm font-medium">Status: <span className="capitalize">{subscription.status}</span></p>
-            {subscription.current_period_end && (
+            <p className="text-sm font-medium">
+              Status: <span className="capitalize">{subscription?.status || 'No subscription'}</span>
+            </p>
+            {subscription?.current_period_end && (
               <p className="text-sm text-muted-foreground">
-                Current period ends: {new Date(subscription.current_period_end).toLocaleDateString()}
+                {subscription.status === 'active' ? 'Trial ends' : 'Ended'}: {new Date(subscription.current_period_end).toLocaleDateString()}
               </p>
             )}
           </div>
-          {subscription.status === 'active' && (
+          {subscription?.status === 'active' && (
             <Button
               variant="destructive"
               onClick={handleCancelSubscription}
