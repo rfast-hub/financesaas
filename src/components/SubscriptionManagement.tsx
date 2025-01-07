@@ -10,7 +10,7 @@ const SubscriptionManagement = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: subscription, isLoading: isLoadingSubscription, error } = useQuery({
+  const { data: subscription, isLoading: isLoadingSubscription, error, refetch } = useQuery({
     queryKey: ['subscription'],
     queryFn: async () => {
       console.log('Fetching subscription data...');
@@ -36,16 +36,20 @@ const SubscriptionManagement = () => {
   const handleCancelSubscription = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/cancel-subscription', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user found');
 
-      if (!response.ok) {
-        throw new Error('Failed to cancel subscription');
-      }
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({ 
+          status: 'cancelled',
+          canceled_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await refetch(); // Refresh the subscription data
 
       toast({
         title: "Subscription cancelled",
