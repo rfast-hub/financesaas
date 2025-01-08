@@ -9,7 +9,7 @@ import { Subscription } from "@/types/subscription";
 interface CancelSubscriptionButtonProps {
   subscription: Subscription | null;
   isTrial: boolean;
-  onCancel: () => Promise<void>;
+  onCancel: () => void;
 }
 
 const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSubscriptionButtonProps) => {
@@ -52,7 +52,7 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
         throw cancelError;
       }
 
-      await onCancel();
+      onCancel();
 
       toast({
         title: "Subscription cancelled",

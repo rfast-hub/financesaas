@@ -72,6 +72,10 @@ const SubscriptionManagement = () => {
 
   const isTrial = subscription?.status === 'active' && !subscription?.subscription_id;
 
+  const handleCancel = () => {
+    refetch();
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -88,7 +92,7 @@ const SubscriptionManagement = () => {
             <CancelSubscriptionButton 
               subscription={subscription}
               isTrial={isTrial}
-              onCancel={refetch}
+              onCancel={handleCancel}
             />
           )}
         </div>
