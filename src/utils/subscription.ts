@@ -37,8 +37,5 @@ export const cancelSubscription = async (
     throw new Error("Failed to cancel subscription. Please try again later.");
   }
 
-  // Sign out the user immediately after cancellation
-  await supabase.auth.signOut();
-
-  console.log('Subscription cancelled and account deactivated successfully');
+  console.log('Subscription cancelled successfully');
 };

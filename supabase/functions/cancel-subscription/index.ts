@@ -49,10 +49,17 @@ serve(async (req) => {
         apiVersion: '2023-10-16',
       });
 
-      // Cancel the subscription in Stripe
-      console.log('Cancelling Stripe subscription:', subscription_id);
-      await stripe.subscriptions.cancel(subscription_id);
-      console.log('Stripe subscription cancelled:', subscription_id);
+      try {
+        // Cancel the subscription in Stripe immediately
+        console.log('Cancelling Stripe subscription:', subscription_id);
+        await stripe.subscriptions.cancel(subscription_id, {
+          cancel_at_period_end: true // This ensures the subscription remains active until the end of the current period
+        });
+        console.log('Stripe subscription cancelled:', subscription_id);
+      } catch (stripeError) {
+        console.error('Error cancelling Stripe subscription:', stripeError);
+        throw new Error('Failed to cancel Stripe subscription');
+      }
     }
 
     // Update subscription status in database
