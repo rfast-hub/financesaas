@@ -28,18 +28,42 @@ export const useSession = () => {
         throw new Error("Failed to delete price alerts");
       }
 
-      // Then, delete subscription
-      const { error: subscriptionError } = await supabase
+      // Then, get and handle subscription
+      const { data: subscriptionData, error: subscriptionFetchError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', currentSession.user.id)
+        .maybeSingle();
+
+      if (subscriptionFetchError) {
+        console.error("Error fetching subscription:", subscriptionFetchError);
+        throw new Error("Failed to fetch subscription details");
+      }
+
+      // If there's an active Stripe subscription, cancel it
+      if (subscriptionData?.subscription_id && subscriptionData.status === 'active') {
+        try {
+          await supabase.functions.invoke('cancel-subscription', {
+            body: { subscription_id: subscriptionData.subscription_id }
+          });
+        } catch (error) {
+          console.error("Error cancelling Stripe subscription:", error);
+          // Continue with account deletion even if Stripe cancellation fails
+        }
+      }
+
+      // Delete subscription record
+      const { error: subscriptionDeleteError } = await supabase
         .from('subscriptions')
         .delete()
         .eq('user_id', currentSession.user.id);
 
-      if (subscriptionError) {
-        console.error("Error deleting subscription:", subscriptionError);
+      if (subscriptionDeleteError) {
+        console.error("Error deleting subscription:", subscriptionDeleteError);
         throw new Error("Failed to delete subscription");
       }
 
-      // Finally, delete the user
+      // Finally, delete the user account
       const { error: userError } = await supabase.auth.admin.deleteUser(
         currentSession.user.id
       );
