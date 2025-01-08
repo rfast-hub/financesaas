@@ -20,9 +20,12 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
   const handleCancelSubscription = async () => {
     try {
       setIsLoading(true);
+      console.log('Starting subscription cancellation process...');
+
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        console.log('No session found, redirecting to login...');
         toast({
           variant: "destructive",
           title: "Error",
@@ -34,6 +37,7 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.log('No authenticated user found, redirecting to login...');
         toast({
           variant: "destructive",
           title: "Error",
@@ -43,7 +47,7 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
         return;
       }
 
-      // Call the cancel-subscription edge function
+      console.log('Calling cancel-subscription function...');
       const { data, error: cancelError } = await supabase.functions.invoke('cancel-subscription', {
         body: { subscription_id: subscription?.subscription_id }
       });
@@ -54,9 +58,11 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
       }
 
       if (!data?.success) {
+        console.error('Cancellation failed:', data?.message);
         throw new Error(data?.message || 'Failed to cancel subscription');
       }
 
+      console.log('Subscription cancelled successfully');
       onCancel();
 
       toast({

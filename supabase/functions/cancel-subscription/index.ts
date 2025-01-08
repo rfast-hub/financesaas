@@ -22,10 +22,11 @@ serve(async (req) => {
     // Get user from auth header
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabaseClient.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
-    if (!user?.email) {
-      throw new Error('User not found');
+    if (userError || !user?.email) {
+      console.error('User authentication error:', userError);
+      throw new Error('User not authenticated');
     }
 
     // Initialize Stripe
@@ -35,12 +36,27 @@ serve(async (req) => {
 
     // Get request body
     const { subscription_id } = await req.json();
+    console.log('Received request to cancel subscription:', { subscription_id, userId: user.id });
 
     // For trial cancellation (no Stripe subscription)
     if (!subscription_id) {
-      console.log('Cancelling trial subscription...');
+      console.log('Processing trial cancellation for user:', user.id);
       
-      // Update subscription status in database
+      const { data: subscription, error: fetchError } = await supabaseClient
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching subscription:', fetchError);
+        throw new Error('Failed to fetch subscription details');
+      }
+
+      if (!subscription) {
+        throw new Error('No subscription found');
+      }
+
       const { error: updateError } = await supabaseClient
         .from('subscriptions')
         .update({
@@ -50,10 +66,11 @@ serve(async (req) => {
         .eq('user_id', user.id);
 
       if (updateError) {
-        console.error('Error updating trial subscription in database:', updateError);
+        console.error('Error updating trial subscription:', updateError);
         throw new Error('Failed to cancel trial subscription');
       }
 
+      console.log('Trial successfully cancelled for user:', user.id);
       return new Response(
         JSON.stringify({ success: true, message: 'Trial cancelled successfully' }),
         {
@@ -63,7 +80,7 @@ serve(async (req) => {
     }
 
     // For paid subscription cancellation
-    console.log('Cancelling paid subscription:', subscription_id);
+    console.log('Processing paid subscription cancellation:', subscription_id);
     
     // Get customer by email
     const customers = await stripe.customers.list({
@@ -72,35 +89,44 @@ serve(async (req) => {
     });
 
     if (customers.data.length === 0) {
-      throw new Error('No active subscription found');
+      console.error('No Stripe customer found for email:', user.email);
+      throw new Error('No customer found');
     }
 
-    // Cancel the subscription in Stripe
-    const subscription = await stripe.subscriptions.cancel(subscription_id);
+    try {
+      // Cancel the subscription in Stripe
+      const subscription = await stripe.subscriptions.cancel(subscription_id);
+      console.log('Stripe subscription cancelled:', subscription.id);
 
-    // Update subscription status in database
-    const { error: updateError } = await supabaseClient
-      .from('subscriptions')
-      .update({
-        status: subscription.status,
-        canceled_at: new Date().toISOString(),
-      })
-      .eq('subscription_id', subscription_id);
+      // Update subscription status in database
+      const { error: updateError } = await supabaseClient
+        .from('subscriptions')
+        .update({
+          status: subscription.status,
+          canceled_at: new Date().toISOString(),
+        })
+        .eq('subscription_id', subscription_id)
+        .eq('user_id', user.id);
 
-    if (updateError) {
-      console.error('Error updating subscription in database:', updateError);
-      throw new Error('Failed to update subscription status');
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, message: 'Subscription cancelled successfully' }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      if (updateError) {
+        console.error('Error updating subscription in database:', updateError);
+        throw new Error('Failed to update subscription status');
       }
-    );
+
+      console.log('Successfully cancelled subscription for user:', user.id);
+      return new Response(
+        JSON.stringify({ success: true, message: 'Subscription cancelled successfully' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (stripeError) {
+      console.error('Stripe cancellation error:', stripeError);
+      throw new Error(stripeError instanceof Error ? stripeError.message : 'Failed to cancel Stripe subscription');
+    }
 
   } catch (error) {
-    console.error('Error cancelling subscription:', error);
+    console.error('Error in cancel-subscription function:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
