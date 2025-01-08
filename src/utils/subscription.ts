@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 export const cancelSubscription = async (
   subscriptionId: string | null,
@@ -42,5 +41,23 @@ export const cancelSubscription = async (
     throw new Error("Failed to cancel subscription. Please try again later.");
   }
 
-  console.log('Subscription cancelled successfully');
+  // Update subscription status and deactivate account
+  const { error: updateError } = await supabase
+    .from('subscriptions')
+    .update({
+      status: 'canceled',
+      canceled_at: new Date().toISOString(),
+      is_active: false
+    })
+    .eq('user_id', session.user.id);
+
+  if (updateError) {
+    console.error('Error updating subscription:', updateError);
+    throw new Error("Failed to update subscription status.");
+  }
+
+  // Sign out the user immediately after cancellation
+  await supabase.auth.signOut();
+
+  console.log('Subscription cancelled and account deactivated successfully');
 };

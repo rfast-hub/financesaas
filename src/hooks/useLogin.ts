@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { validateEmail, validatePassword } from "@/utils/validation";
-import { AuthError } from "@supabase/supabase-js";
 
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -40,7 +39,6 @@ export const useLogin = () => {
       if (error) {
         let errorMessage = "Invalid credentials. Please try again.";
         
-        // Handle specific error cases
         if (error.message.includes("Invalid login credentials")) {
           errorMessage = "Invalid email or password. Please check your credentials.";
         } else if (error.message.includes("Email not confirmed")) {
@@ -57,6 +55,29 @@ export const useLogin = () => {
       }
 
       if (data.session) {
+        // Check subscription status
+        const { data: subscription, error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .select('is_active, status')
+          .eq('user_id', data.session.user.id)
+          .single();
+
+        if (subscriptionError) {
+          console.error("Subscription check error:", subscriptionError);
+          throw new Error("Failed to verify account status");
+        }
+
+        if (!subscription?.is_active) {
+          // Sign out the user immediately
+          await supabase.auth.signOut();
+          toast({
+            variant: "destructive",
+            title: "Account inactive",
+            description: "Your account is currently inactive. Please subscribe to reactivate your account.",
+          });
+          return;
+        }
+
         // Navigate to home page
         navigate("/");
         
@@ -70,7 +91,7 @@ export const useLogin = () => {
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: "An unexpected error occurred. Please try again.",
+        description: error.message || "An unexpected error occurred. Please try again.",
       });
     } finally {
       setLoading(false);

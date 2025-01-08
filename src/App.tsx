@@ -28,14 +28,38 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       setSession(true);
     }
 
-    // Check current session
+    // Check current session and subscription status
     const checkSession = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(!!currentSession);
+        
         if (currentSession) {
+          // Check subscription status
+          const { data: subscription, error: subscriptionError } = await supabase
+            .from('subscriptions')
+            .select('is_active, status')
+            .eq('user_id', currentSession.user.id)
+            .single();
+
+          if (subscriptionError) {
+            console.error("Subscription check error:", subscriptionError);
+            setSession(false);
+            localStorage.removeItem('supabase.auth.token');
+            return;
+          }
+
+          if (!subscription?.is_active) {
+            // Sign out if account is inactive
+            await supabase.auth.signOut();
+            setSession(false);
+            localStorage.removeItem('supabase.auth.token');
+            return;
+          }
+
+          setSession(true);
           localStorage.setItem('supabase.auth.token', 'true');
         } else {
+          setSession(false);
           localStorage.removeItem('supabase.auth.token');
         }
       } catch (error) {
@@ -53,13 +77,27 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(!!session);
-      setLoading(false);
       if (session) {
-        localStorage.setItem('supabase.auth.token', 'true');
+        // Check subscription status on auth state change
+        const { data: subscription, error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .select('is_active, status')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (subscriptionError || !subscription?.is_active) {
+          await supabase.auth.signOut();
+          setSession(false);
+          localStorage.removeItem('supabase.auth.token');
+        } else {
+          setSession(true);
+          localStorage.setItem('supabase.auth.token', 'true');
+        }
       } else {
+        setSession(false);
         localStorage.removeItem('supabase.auth.token');
       }
+      setLoading(false);
     });
 
     return () => {

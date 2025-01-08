@@ -51,6 +51,7 @@ export type Database = {
           created_at: string | null
           current_period_end: string | null
           id: string
+          is_active: boolean | null
           status: string
           subscription_id: string | null
           user_id: string
@@ -60,6 +61,7 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           id?: string
+          is_active?: boolean | null
           status: string
           subscription_id?: string | null
           user_id: string
@@ -69,6 +71,7 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           id?: string
+          is_active?: boolean | null
           status?: string
           subscription_id?: string | null
           user_id?: string
