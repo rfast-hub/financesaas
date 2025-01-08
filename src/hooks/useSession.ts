@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { checkSubscriptionStatus } from "@/utils/subscriptionUtils";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { checkAuthSession, signOut, deleteUserData, deleteUserAccount } from "@/utils/authUtils";
 
 export const useSession = () => {
   const [session, setSession] = useState<boolean | null>(null);
@@ -12,48 +13,15 @@ export const useSession = () => {
 
   const deleteAccount = async () => {
     try {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const currentSession = await checkAuthSession();
       if (!currentSession?.user.id) {
         throw new Error("No user session found");
       }
 
-      // First, delete all price alerts
-      const { error: alertsError } = await supabase
-        .from('price_alerts')
-        .delete()
-        .eq('user_id', currentSession.user.id);
-
-      if (alertsError) {
-        console.error("Error deleting price alerts:", alertsError);
-      }
-
-      // Delete subscription record directly
-      const { error: subscriptionDeleteError } = await supabase
-        .from('subscriptions')
-        .delete()
-        .eq('user_id', currentSession.user.id);
-
-      if (subscriptionDeleteError) {
-        console.error("Error deleting subscription:", subscriptionDeleteError);
-      }
-
-      type DeleteUserFunctionResponse = {
-        message: string;
-      }
-
-      // Delete the user using the service role client with proper typing
-      const { data, error: userError } = await supabase.functions.invoke<DeleteUserFunctionResponse>('delete-user', {
-        body: { user_id: currentSession.user.id }
-      });
-
-      if (userError) {
-        console.error("Error deleting user:", userError);
-        throw new Error("Failed to delete user account");
-      }
-
-      // Sign out and clear local storage
-      await supabase.auth.signOut();
-      localStorage.removeItem('supabase.auth.token');
+      await deleteUserData(currentSession.user.id);
+      await deleteUserAccount(currentSession.user.id);
+      await signOut();
+      
       setSession(false);
       navigate('/login');
       
@@ -79,15 +47,14 @@ export const useSession = () => {
 
     const checkSession = async () => {
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const currentSession = await checkAuthSession();
         
         if (currentSession) {
           const isActive = await checkSubscriptionStatus(currentSession.user.id);
           
           if (!isActive) {
-            await supabase.auth.signOut();
+            await signOut();
             setSession(false);
-            localStorage.removeItem('supabase.auth.token');
             return;
           }
 
@@ -113,9 +80,8 @@ export const useSession = () => {
         const isActive = await checkSubscriptionStatus(session.user.id);
         
         if (!isActive) {
-          await supabase.auth.signOut();
+          await signOut();
           setSession(false);
-          localStorage.removeItem('supabase.auth.token');
         } else {
           setSession(true);
           localStorage.setItem('supabase.auth.token', 'true');
