@@ -19,20 +19,31 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
 
   const handleLogout = async () => {
     try {
-      // First clear local storage
-      localStorage.removeItem('supabase.auth.token');
-      
-      // Then sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Logout error:", error);
+      // First, remove all session data from localStorage
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('supabase.auth.')) {
+          localStorage.removeItem(key);
+        }
       }
       
-      // Always navigate to login, even if there was an error
+      // Then attempt to sign out from Supabase
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error("Supabase signOut error:", error);
+        }
+      } catch (signOutError) {
+        console.error("Error during signOut:", signOutError);
+      }
+
+      // Force clear the session
+      await supabase.auth.setSession(null);
+      
+      // Always navigate to login
       navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
-      // Even if there's an error, redirect to login
+      // Even if there's an error, clear session and redirect
       navigate("/login");
     }
   };
