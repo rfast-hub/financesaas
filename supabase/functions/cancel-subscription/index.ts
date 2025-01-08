@@ -33,6 +33,38 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
+    // Get request body
+    const { subscription_id } = await req.json();
+
+    // For trial cancellation (no Stripe subscription)
+    if (!subscription_id) {
+      console.log('Cancelling trial subscription...');
+      
+      // Update subscription status in database
+      const { error: updateError } = await supabaseClient
+        .from('subscriptions')
+        .update({
+          status: 'canceled',
+          canceled_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        console.error('Error updating trial subscription in database:', updateError);
+        throw new Error('Failed to cancel trial subscription');
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Trial cancelled successfully' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // For paid subscription cancellation
+    console.log('Cancelling paid subscription:', subscription_id);
+    
     // Get customer by email
     const customers = await stripe.customers.list({
       email: user.email,
@@ -43,19 +75,8 @@ serve(async (req) => {
       throw new Error('No active subscription found');
     }
 
-    // Get active subscriptions
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customers.data[0].id,
-      status: 'active',
-      limit: 1,
-    });
-
-    if (subscriptions.data.length === 0) {
-      throw new Error('No active subscription found');
-    }
-
-    // Cancel the subscription
-    const subscription = await stripe.subscriptions.cancel(subscriptions.data[0].id);
+    // Cancel the subscription in Stripe
+    const subscription = await stripe.subscriptions.cancel(subscription_id);
 
     // Update subscription status in database
     const { error: updateError } = await supabaseClient
@@ -64,14 +85,15 @@ serve(async (req) => {
         status: subscription.status,
         canceled_at: new Date().toISOString(),
       })
-      .eq('subscription_id', subscription.id);
+      .eq('subscription_id', subscription_id);
 
     if (updateError) {
       console.error('Error updating subscription in database:', updateError);
+      throw new Error('Failed to update subscription status');
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, message: 'Subscription cancelled successfully' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
@@ -80,7 +102,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error cancelling subscription:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Failed to cancel subscription'
+      }),
       {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -44,12 +44,17 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
       }
 
       // Call the cancel-subscription edge function
-      const { error: cancelError } = await supabase.functions.invoke('cancel-subscription', {
+      const { data, error: cancelError } = await supabase.functions.invoke('cancel-subscription', {
         body: { subscription_id: subscription?.subscription_id }
       });
 
       if (cancelError) {
-        throw cancelError;
+        console.error('Cancellation error:', cancelError);
+        throw new Error(cancelError.message || 'Failed to cancel subscription');
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.message || 'Failed to cancel subscription');
       }
 
       onCancel();
@@ -66,7 +71,7 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to cancel subscription. Please try again later.",
+        description: error instanceof Error ? error.message : "Failed to cancel subscription. Please try again later.",
       });
     } finally {
       setIsLoading(false);
