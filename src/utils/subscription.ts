@@ -26,34 +26,15 @@ export const cancelSubscription = async (
   }
 
   // Call the edge function to cancel the subscription
-  const response = await fetch('/api/cancel-subscription', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({
+  const { data, error } = await supabase.functions.invoke('cancel-subscription', {
+    body: {
       subscription_id: subscriptionId,
-    }),
+    },
   });
 
-  if (!response.ok) {
+  if (error) {
+    console.error('Error cancelling subscription:', error);
     throw new Error("Failed to cancel subscription. Please try again later.");
-  }
-
-  // Update subscription status and deactivate account
-  const { error: updateError } = await supabase
-    .from('subscriptions')
-    .update({
-      status: 'canceled',
-      canceled_at: new Date().toISOString(),
-      is_active: false
-    })
-    .eq('user_id', session.user.id);
-
-  if (updateError) {
-    console.error('Error updating subscription:', updateError);
-    throw new Error("Failed to update subscription status.");
   }
 
   // Sign out the user immediately after cancellation
