@@ -25,10 +25,10 @@ export const useSession = () => {
 
       if (alertsError) {
         console.error("Error deleting price alerts:", alertsError);
-        throw new Error("Failed to delete price alerts");
+        // Continue with deletion even if there's an error with alerts
       }
 
-      // Then, get and handle subscription
+      // Get subscription data
       const { data: subscriptionData, error: subscriptionFetchError } = await supabase
         .from('subscriptions')
         .select('*')
@@ -37,18 +37,18 @@ export const useSession = () => {
 
       if (subscriptionFetchError) {
         console.error("Error fetching subscription:", subscriptionFetchError);
-        throw new Error("Failed to fetch subscription details");
+        // Continue with deletion even if there's an error fetching subscription
       }
 
-      // If there's an active Stripe subscription, cancel it
-      if (subscriptionData?.subscription_id && subscriptionData.status === 'active') {
+      // If there's a Stripe subscription, attempt to cancel it
+      if (subscriptionData?.subscription_id) {
         try {
           await supabase.functions.invoke('cancel-subscription', {
             body: { subscription_id: subscriptionData.subscription_id }
           });
         } catch (error) {
           console.error("Error cancelling Stripe subscription:", error);
-          // Continue with account deletion even if Stripe cancellation fails
+          // Continue with deletion even if Stripe cancellation fails
         }
       }
 
@@ -60,12 +60,13 @@ export const useSession = () => {
 
       if (subscriptionDeleteError) {
         console.error("Error deleting subscription:", subscriptionDeleteError);
-        throw new Error("Failed to delete subscription");
+        // Continue with deletion even if there's an error deleting subscription
       }
 
-      // Finally, delete the user account
+      // Delete the user account using admin API
       const { error: userError } = await supabase.auth.admin.deleteUser(
-        currentSession.user.id
+        currentSession.user.id,
+        true // Force delete regardless of subscription status
       );
 
       if (userError) {
