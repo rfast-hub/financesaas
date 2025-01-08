@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { validateEmail, validatePassword } from "@/utils/validation";
+import { AuthError } from "@supabase/supabase-js";
 
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -31,32 +32,31 @@ export const useLogin = () => {
     setLoading(true);
     
     try {
-      // Clear any existing session data from localStorage
-      for (const key of Object.keys(localStorage)) {
-        if (key.startsWith('supabase.auth.')) {
-          localStorage.removeItem(key);
-        }
-      }
-
-      // Clear the session in Supabase
-      await supabase.auth.setSession(null);
-      
-      // Attempt to sign in
-      const { data: { session }, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
+        let errorMessage = "Invalid credentials. Please try again.";
+        
+        // Handle specific error cases
+        if (error.message.includes("Invalid login credentials")) {
+          errorMessage = "Invalid email or password. Please check your credentials.";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Please verify your email address before signing in.";
+        }
+        
         toast({
           variant: "destructive",
-          title: "Authentication error",
-          description: error.message || "Invalid credentials. Please try again.",
+          title: "Login failed",
+          description: errorMessage,
         });
+        console.error("Login error details:", error);
         return;
       }
 
-      if (session) {
+      if (data.session) {
         // Navigate to home page
         navigate("/");
         
