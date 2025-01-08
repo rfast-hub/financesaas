@@ -5,6 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Subscription } from "@/types/subscription";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface CancelSubscriptionButtonProps {
   subscription: Subscription | null;
@@ -14,6 +23,8 @@ interface CancelSubscriptionButtonProps {
 
 const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSubscriptionButtonProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [password, setPassword] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -53,10 +64,22 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
       setIsLoading(true);
       console.log('Starting subscription cancellation process...');
 
-      // Get current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
+      // Verify password first
+      const { data: { session }, error: authError } = await supabase.auth.signInWithPassword({
+        email: (await supabase.auth.getUser()).data.user?.email || '',
+        password: password
+      });
+
+      if (authError) {
+        toast({
+          variant: "destructive",
+          title: "Authentication Failed",
+          description: "Incorrect password. Please try again.",
+        });
+        return;
+      }
+
+      if (!session) {
         console.log('No valid session found, redirecting to login...');
         toast({
           variant: "destructive",
@@ -84,6 +107,7 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
 
       console.log('Subscription cancelled successfully');
       onCancel();
+      setIsDialogOpen(false);
 
       toast({
         title: "Subscription cancelled",
@@ -110,14 +134,57 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
   };
 
   return (
-    <Button
-      variant="destructive"
-      onClick={handleCancelSubscription}
-      disabled={isLoading}
-    >
-      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      Cancel {isTrial ? 'Trial' : 'Subscription'}
-    </Button>
+    <>
+      <Button
+        variant="destructive"
+        onClick={() => setIsDialogOpen(true)}
+        disabled={isLoading}
+      >
+        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Cancel {isTrial ? 'Trial' : 'Subscription'}
+      </Button>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Cancellation</DialogTitle>
+            <DialogDescription>
+              Please enter your password to confirm subscription cancellation.
+              {!isTrial && " Your subscription will be cancelled at the end of the current billing period."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleCancelSubscription}
+                disabled={isLoading || !password}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirm Cancellation
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
