@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { validateEmail, validatePassword } from "@/utils/validation";
+import { checkSubscriptionStatus } from "@/utils/subscriptionUtils";
 
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -55,20 +56,9 @@ export const useLogin = () => {
       }
 
       if (data.session) {
-        // Check subscription status
-        const { data: subscription, error: subscriptionError } = await supabase
-          .from('subscriptions')
-          .select('is_active, status')
-          .eq('user_id', data.session.user.id)
-          .single();
+        const isActive = await checkSubscriptionStatus(data.session.user.id);
 
-        if (subscriptionError) {
-          console.error("Subscription check error:", subscriptionError);
-          throw new Error("Failed to verify account status");
-        }
-
-        if (!subscription?.is_active) {
-          // Sign out the user immediately
+        if (!isActive) {
           await supabase.auth.signOut();
           toast({
             variant: "destructive",
@@ -78,7 +68,6 @@ export const useLogin = () => {
           return;
         }
 
-        // Navigate to home page
         navigate("/");
         
         toast({
