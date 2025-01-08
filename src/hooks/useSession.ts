@@ -37,8 +37,12 @@ export const useSession = () => {
         console.error("Error deleting subscription:", subscriptionDeleteError);
       }
 
-      // Delete the user using the service role client
-      const { data, error: userError } = await supabase.functions.invoke('delete-user', {
+      type DeleteUserFunctionResponse = {
+        message: string;
+      }
+
+      // Delete the user using the service role client with proper typing
+      const { data, error: userError } = await supabase.functions.invoke<DeleteUserFunctionResponse>('delete-user', {
         body: { user_id: currentSession.user.id }
       });
 
