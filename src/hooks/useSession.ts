@@ -25,10 +25,9 @@ export const useSession = () => {
 
       if (alertsError) {
         console.error("Error deleting price alerts:", alertsError);
-        // Continue with deletion even if there's an error with alerts
       }
 
-      // Delete subscription record directly without checking status
+      // Delete subscription record directly
       const { error: subscriptionDeleteError } = await supabase
         .from('subscriptions')
         .delete()
@@ -36,14 +35,12 @@ export const useSession = () => {
 
       if (subscriptionDeleteError) {
         console.error("Error deleting subscription:", subscriptionDeleteError);
-        // Continue with deletion even if there's an error deleting subscription
       }
 
-      // Delete the user account using admin API with force flag
-      const { error: userError } = await supabase.auth.admin.deleteUser(
-        currentSession.user.id,
-        true // Force delete regardless of subscription status
-      );
+      // Delete the user using the service role client
+      const { error: userError } = await supabase.rpc('delete_user', {
+        user_id: currentSession.user.id
+      });
 
       if (userError) {
         console.error("Error deleting user:", userError);
@@ -65,7 +62,7 @@ export const useSession = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to delete account. Please try again.",
+        description: error.message || "Failed to delete user account. Please try again.",
       });
     }
   };
