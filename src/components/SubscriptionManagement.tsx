@@ -78,20 +78,13 @@ const SubscriptionManagement = () => {
         return;
       }
 
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ 
-          status: 'cancelled',
-          canceled_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
+      // Call the cancel-subscription edge function
+      const { error: cancelError } = await supabase.functions.invoke('cancel-subscription', {
+        body: { subscription_id: subscription?.subscription_id }
+      });
 
-      if (error) {
-        if (error.code === 'PGRST301' || error.message.includes('JWT')) {
-          navigate('/login');
-          return;
-        }
-        throw error;
+      if (cancelError) {
+        throw cancelError;
       }
 
       await refetch();
