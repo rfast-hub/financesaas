@@ -1,19 +1,19 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { checkSubscriptionStatus } from "@/utils/subscriptionUtils";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { checkAuthSession, signOut, deleteUserData, deleteUserAccount } from "@/utils/authUtils";
+import { deleteUserData, deleteUserAccount, signOut } from "@/utils/authUtils";
+import { handleSubscriptionCheck } from "@/utils/subscriptionUtils";
+import { useSessionState } from "./useSessionState";
 
 export const useSession = () => {
-  const [session, setSession] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { session, loading, updateSession, setLoading } = useSessionState();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const deleteAccount = async () => {
     try {
-      const currentSession = await checkAuthSession();
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
       if (!currentSession?.user.id) {
         throw new Error("No user session found");
       }
@@ -22,7 +22,7 @@ export const useSession = () => {
       await deleteUserAccount(currentSession.user.id);
       await signOut();
       
-      setSession(false);
+      updateSession(false);
       navigate('/login');
       
       toast({
@@ -46,33 +46,19 @@ export const useSession = () => {
         
         if (sessionError) {
           console.error("Session error:", sessionError);
-          setSession(false);
+          updateSession(false);
           return;
         }
 
         if (currentSession) {
-          try {
-            const isActive = await checkSubscriptionStatus(currentSession.user.id);
-            
-            if (!isActive) {
-              await signOut();
-              setSession(false);
-              return;
-            }
-
-            setSession(true);
-          } catch (error) {
-            console.error("Subscription check error:", error);
-            setSession(false);
-          }
+          const isActive = await handleSubscriptionCheck(currentSession.user.id);
+          updateSession(isActive);
         } else {
-          setSession(false);
+          updateSession(false);
         }
       } catch (error) {
         console.error("Session check error:", error);
-        setSession(false);
-      } finally {
-        setLoading(false);
+        updateSession(false);
       }
     };
 
@@ -80,35 +66,22 @@ export const useSession = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
-        setSession(false);
-        setLoading(false);
+        updateSession(false);
         return;
       }
 
       if (session) {
-        try {
-          const isActive = await checkSubscriptionStatus(session.user.id);
-          
-          if (!isActive) {
-            await signOut();
-            setSession(false);
-          } else {
-            setSession(true);
-          }
-        } catch (error) {
-          console.error("Subscription check error:", error);
-          setSession(false);
-        }
+        const isActive = await handleSubscriptionCheck(session.user.id);
+        updateSession(isActive);
       } else {
-        setSession(false);
+        updateSession(false);
       }
-      setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [updateSession]);
 
   return { session, loading, deleteAccount };
 };

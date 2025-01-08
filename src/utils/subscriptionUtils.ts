@@ -1,16 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "./authUtils";
 
-export const checkSubscriptionStatus = async (userId: string) => {
-  const { data: subscription, error: subscriptionError } = await supabase
-    .from('subscriptions')
-    .select('is_active, status')
-    .eq('user_id', userId)
-    .single();
+export const handleSubscriptionCheck = async (userId: string): Promise<boolean> => {
+  try {
+    const { data: subscription } = await supabase
+      .from("subscriptions")
+      .select("is_active, status")
+      .eq("user_id", userId)
+      .single();
 
-  if (subscriptionError) {
-    console.error("Subscription check error:", subscriptionError);
+    const isActive = subscription?.is_active && subscription?.status === "active";
+    
+    if (!isActive) {
+      await signOut();
+    }
+
+    return isActive;
+  } catch (error) {
+    console.error("Subscription check error:", error);
     return false;
   }
-
-  return subscription?.is_active ?? false;
 };
