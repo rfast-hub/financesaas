@@ -50,11 +50,9 @@ serve(async (req) => {
       });
 
       try {
-        // Cancel the subscription in Stripe at period end
+        // Cancel the subscription in Stripe immediately
         console.log('Cancelling Stripe subscription:', subscription_id);
-        await stripe.subscriptions.update(subscription_id, {
-          cancel_at_period_end: true
-        });
+        await stripe.subscriptions.cancel(subscription_id);
         console.log('Stripe subscription cancelled:', subscription_id);
       } catch (stripeError) {
         console.error('Error cancelling Stripe subscription:', stripeError);
@@ -62,25 +60,13 @@ serve(async (req) => {
       }
     }
 
-    // Get the current subscription to get the period end
-    const { data: subscription, error: subError } = await supabaseAdmin
-      .from('subscriptions')
-      .select('current_period_end')
-      .eq('user_id', user.id)
-      .single();
-
-    if (subError) {
-      console.error('Error fetching subscription:', subError);
-      throw new Error('Failed to fetch subscription details');
-    }
-
-    // Update subscription status in database but keep is_active true until period end
+    // Update subscription status in database
     const { error: updateError } = await supabaseAdmin
       .from('subscriptions')
       .update({
         status: 'canceled',
         canceled_at: new Date().toISOString(),
-        is_active: true // Keep active until period end
+        is_active: false
       })
       .eq('user_id', user.id);
 
@@ -91,10 +77,7 @@ serve(async (req) => {
 
     console.log('Successfully cancelled subscription for user:', user.id);
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        current_period_end: subscription?.current_period_end 
-      }),
+      JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
