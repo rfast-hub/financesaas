@@ -19,8 +19,16 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      // First clear local storage
       localStorage.removeItem('supabase.auth.token');
+      
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+      }
+      
+      // Always navigate to login, even if there was an error
       navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
@@ -34,28 +42,17 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
       setIsLoading(true);
       console.log('Starting subscription cancellation process...');
 
-      const { data: { session } } = await supabase.auth.getSession();
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (!session) {
-        console.log('No session found, redirecting to login...');
+      if (sessionError || !session) {
+        console.log('No valid session found, redirecting to login...');
         toast({
           variant: "destructive",
-          title: "Error",
+          title: "Session expired",
           description: "Please log in again to continue.",
         });
-        navigate('/login');
-        return;
-      }
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log('No authenticated user found, redirecting to login...');
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Authentication error. Please log in again.",
-        });
-        navigate('/login');
+        await handleLogout();
         return;
       }
 
