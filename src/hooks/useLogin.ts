@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { validateEmail, validatePassword } from "@/utils/validation";
-import { checkSubscriptionStatus } from "@/utils/subscriptionUtils";
+import { handleSubscriptionCheck } from "@/utils/subscriptionUtils";
 
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -56,7 +56,7 @@ export const useLogin = () => {
       }
 
       if (data.session) {
-        const isActive = await checkSubscriptionStatus(data.session.user.id);
+        const isActive = await handleSubscriptionCheck(data.session.user.id);
 
         if (!isActive) {
           await supabase.auth.signOut();
