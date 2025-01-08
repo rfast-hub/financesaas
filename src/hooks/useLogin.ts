@@ -31,9 +31,15 @@ export const useLogin = () => {
     setLoading(true);
     
     try {
-      // First, ensure any existing session is cleared
-      await supabase.auth.signOut();
-      localStorage.removeItem('supabase.auth.token');
+      // Clear any existing session data from localStorage
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('supabase.auth.')) {
+          localStorage.removeItem(key);
+        }
+      }
+
+      // Clear the session in Supabase
+      await supabase.auth.setSession(null);
       
       // Attempt to sign in
       const { data: { session }, error } = await supabase.auth.signInWithPassword({
@@ -51,15 +57,6 @@ export const useLogin = () => {
       }
 
       if (session) {
-        // Store session data
-        localStorage.setItem('supabase.auth.token', session.access_token);
-        
-        // Set session with the tokens from the successful login
-        await supabase.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token
-        });
-
         // Navigate to home page
         navigate("/");
         

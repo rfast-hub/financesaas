@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { LogOut } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -18,34 +18,29 @@ const Index = () => {
 
   const handleLogout = async () => {
     try {
-      // Clear local storage first
-      localStorage.removeItem('supabase.auth.token');
+      // Clear all Supabase auth-related items from localStorage
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('supabase.auth.')) {
+          localStorage.removeItem(key);
+        }
+      }
+
+      // Clear the session in Supabase
+      await supabase.auth.setSession(null);
       
       // Attempt to sign out
       const { error } = await supabase.auth.signOut();
-      
       if (error) {
         console.error("Logout error:", error);
-        // If we get a session not found error, we can still proceed with navigation
-        if (error.message.includes('session_not_found')) {
-          navigate("/login");
-          return;
-        }
-        
-        toast({
-          variant: "destructive",
-          title: "Error logging out",
-          description: "Please try again.",
-        });
-        return;
       }
 
-      // Successfully logged out
+      // Navigate to login page
       navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
-      // Even if there's an error, clear the session and redirect
-      localStorage.removeItem('supabase.auth.token');
+      // Even if there's an error, clear everything and redirect
+      localStorage.clear();
+      await supabase.auth.setSession(null);
       navigate("/login");
     }
   };
