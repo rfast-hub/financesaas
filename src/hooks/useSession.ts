@@ -28,31 +28,7 @@ export const useSession = () => {
         // Continue with deletion even if there's an error with alerts
       }
 
-      // Get subscription data
-      const { data: subscriptionData, error: subscriptionFetchError } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', currentSession.user.id)
-        .maybeSingle();
-
-      if (subscriptionFetchError) {
-        console.error("Error fetching subscription:", subscriptionFetchError);
-        // Continue with deletion even if there's an error fetching subscription
-      }
-
-      // If there's a Stripe subscription, attempt to cancel it
-      if (subscriptionData?.subscription_id) {
-        try {
-          await supabase.functions.invoke('cancel-subscription', {
-            body: { subscription_id: subscriptionData.subscription_id }
-          });
-        } catch (error) {
-          console.error("Error cancelling Stripe subscription:", error);
-          // Continue with deletion even if Stripe cancellation fails
-        }
-      }
-
-      // Delete subscription record
+      // Delete subscription record directly without checking status
       const { error: subscriptionDeleteError } = await supabase
         .from('subscriptions')
         .delete()
@@ -63,7 +39,7 @@ export const useSession = () => {
         // Continue with deletion even if there's an error deleting subscription
       }
 
-      // Delete the user account using admin API
+      // Delete the user account using admin API with force flag
       const { error: userError } = await supabase.auth.admin.deleteUser(
         currentSession.user.id,
         true // Force delete regardless of subscription status
