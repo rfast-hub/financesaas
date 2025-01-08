@@ -38,8 +38,8 @@ export const useSession = () => {
       }
 
       // Delete the user using the service role client
-      const { error: userError } = await supabase.rpc('delete_user', {
-        user_id: currentSession.user.id
+      const { data, error: userError } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: currentSession.user.id }
       });
 
       if (userError) {
