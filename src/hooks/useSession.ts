@@ -40,34 +40,37 @@ export const useSession = () => {
   };
 
   useEffect(() => {
-    const storedSession = localStorage.getItem('supabase.auth.token');
-    if (storedSession) {
-      setSession(true);
-    }
-
     const checkSession = async () => {
       try {
-        const currentSession = await checkAuthSession();
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
         
-        if (currentSession) {
-          const isActive = await checkSubscriptionStatus(currentSession.user.id);
-          
-          if (!isActive) {
-            await signOut();
-            setSession(false);
-            return;
-          }
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          setSession(false);
+          return;
+        }
 
-          setSession(true);
-          localStorage.setItem('supabase.auth.token', 'true');
+        if (currentSession) {
+          try {
+            const isActive = await checkSubscriptionStatus(currentSession.user.id);
+            
+            if (!isActive) {
+              await signOut();
+              setSession(false);
+              return;
+            }
+
+            setSession(true);
+          } catch (error) {
+            console.error("Subscription check error:", error);
+            setSession(false);
+          }
         } else {
           setSession(false);
-          localStorage.removeItem('supabase.auth.token');
         }
       } catch (error) {
         console.error("Session check error:", error);
         setSession(false);
-        localStorage.removeItem('supabase.auth.token');
       } finally {
         setLoading(false);
       }
@@ -75,20 +78,29 @@ export const useSession = () => {
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setSession(false);
+        setLoading(false);
+        return;
+      }
+
       if (session) {
-        const isActive = await checkSubscriptionStatus(session.user.id);
-        
-        if (!isActive) {
-          await signOut();
+        try {
+          const isActive = await checkSubscriptionStatus(session.user.id);
+          
+          if (!isActive) {
+            await signOut();
+            setSession(false);
+          } else {
+            setSession(true);
+          }
+        } catch (error) {
+          console.error("Subscription check error:", error);
           setSession(false);
-        } else {
-          setSession(true);
-          localStorage.setItem('supabase.auth.token', 'true');
         }
       } else {
         setSession(false);
-        localStorage.removeItem('supabase.auth.token');
       }
       setLoading(false);
     });
