@@ -17,6 +17,18 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('supabase.auth.token');
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if there's an error, redirect to login
+      navigate("/login");
+    }
+  };
+
   const handleCancelSubscription = async () => {
     try {
       setIsLoading(true);
@@ -67,10 +79,15 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
 
       toast({
         title: "Subscription cancelled",
-        description: subscription?.subscription_id ? 
-          "Your subscription has been cancelled. You'll have access until the end of your current period." :
-          "Your trial has been cancelled.",
+        description: isTrial ? 
+          "Your trial has been cancelled. You'll be logged out now." :
+          "Your subscription has been cancelled. You'll have access until the end of your current period.",
       });
+
+      // If it's a trial, log the user out
+      if (isTrial) {
+        await handleLogout();
+      }
 
     } catch (error) {
       console.error('Error cancelling subscription:', error);
