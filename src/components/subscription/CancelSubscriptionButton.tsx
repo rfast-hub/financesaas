@@ -31,7 +31,7 @@ const CancelSubscriptionButton = ({ subscription, isTrial, onCancel }: CancelSub
         title: "Subscription cancelled",
         description: isTrial 
           ? "Your trial has been cancelled." 
-          : "Your subscription will be cancelled at the end of the current billing period.",
+          : `Your subscription will remain active until ${new Date(subscription?.current_period_end || '').toLocaleDateString()}`,
       });
     } catch (error: any) {
       console.error('Error cancelling subscription:', error);
