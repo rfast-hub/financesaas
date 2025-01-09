@@ -56,13 +56,14 @@ export const useLogin = () => {
             return;
           }
 
-          // Changed navigation to /dashboard instead of /
-          navigate("/dashboard");
-          
           toast({
             title: "Welcome back!",
             description: "Successfully logged in.",
           });
+
+          // Ensure navigation happens after successful login
+          navigate("/dashboard", { replace: true });
+          
         } catch (subscriptionError) {
           console.error("Subscription check error:", subscriptionError);
           toast({
