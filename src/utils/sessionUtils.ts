@@ -10,12 +10,22 @@ export const configureSessionTimeout = () => {
   let currentCleanup: (() => void) | undefined;
 
   const setupSessionTimeout = (session: any) => {
+    // Only setup timeout if we have a valid session with an expiry
+    if (!session?.expires_at) {
+      return;
+    }
+
     // Set session expiry time
-    const expiryTime = new Date(session.expires_at! * 1000);
+    const expiryTime = new Date(session.expires_at * 1000);
     const now = new Date();
     
     // Calculate time until expiry in milliseconds
     const timeUntilExpiry = expiryTime.getTime() - now.getTime();
+    
+    // If the session is already expired, don't set up monitoring
+    if (timeUntilExpiry <= 0) {
+      return;
+    }
     
     // Ensure the session doesn't exceed maximum duration
     const actualTimeout = Math.min(timeUntilExpiry, MAX_SESSION_DURATION * 1000);
@@ -66,11 +76,8 @@ export const configureSessionTimeout = () => {
       currentCleanup = undefined;
     }
 
-    if (event === 'SIGNED_OUT') {
-      return;
-    }
-
-    if (session) {
+    // Only setup monitoring for SIGNED_IN event
+    if (event === 'SIGNED_IN' && session) {
       currentCleanup = setupSessionTimeout(session);
     }
   });
