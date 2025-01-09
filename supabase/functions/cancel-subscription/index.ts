@@ -50,9 +50,12 @@ serve(async (req) => {
       });
 
       try {
-        // Cancel the subscription in Stripe immediately
+        // Cancel the subscription in Stripe immediately with immediate effect
         console.log('Cancelling Stripe subscription:', subscription_id);
-        await stripe.subscriptions.cancel(subscription_id);
+        await stripe.subscriptions.cancel(subscription_id, {
+          prorate: true, // This will prorate the cancellation
+          invoice_now: true // This will generate a final invoice immediately
+        });
         console.log('Stripe subscription cancelled:', subscription_id);
       } catch (stripeError) {
         console.error('Error cancelling Stripe subscription:', stripeError);
@@ -60,13 +63,14 @@ serve(async (req) => {
       }
     }
 
-    // Update subscription status in database
+    // Update subscription status in database immediately
     const { error: updateError } = await supabaseAdmin
       .from('subscriptions')
       .update({
         status: 'canceled',
         canceled_at: new Date().toISOString(),
-        is_active: false
+        is_active: false,
+        current_period_end: new Date().toISOString() // Set period end to now
       })
       .eq('user_id', user.id);
 
