@@ -31,7 +31,7 @@ const PriceAlerts = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!userId && !!session,
+    enabled: !!userId,
     staleTime: 1000 * 60,
     refetchOnWindowFocus: true,
     meta: {

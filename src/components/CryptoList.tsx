@@ -23,6 +23,7 @@ const CryptoList = () => {
     queryKey: ['cryptos'],
     queryFn: fetchCryptoData,
     refetchInterval: 30000,
+    enabled: true, // Always fetch crypto data regardless of session
     meta: {
       onError: (error: Error) => {
         console.error('Query error:', error);
@@ -33,7 +34,6 @@ const CryptoList = () => {
         });
       },
     },
-    enabled: !!session // Only fetch when session is available
   });
 
   if (isLoading) {

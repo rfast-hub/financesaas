@@ -16,23 +16,18 @@ export const useSession = () => {
   const { data: sessionData } = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
-      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
       
-      if (sessionError) {
-        console.error("Session error:", sessionError);
+      if (!currentSession) {
         updateSession(false);
         setLoading(false);
         return null;
       }
 
-      if (currentSession) {
-        const isActive = await handleSubscriptionCheck(currentSession.user.id);
-        updateSession(isActive);
-        return currentSession;
-      }
-      
-      updateSession(false);
-      return null;
+      const isActive = await handleSubscriptionCheck(currentSession.user.id);
+      updateSession(isActive);
+      setLoading(false);
+      return currentSession;
     },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     refetchOnWindowFocus: true,
