@@ -8,16 +8,20 @@ const PriceAlerts = () => {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('PriceAlerts component mounted');
     // Get current user's ID
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
+        console.log('User ID set:', user.id);
         setUserId(user.id);
       }
     });
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id || null);
+      const newUserId = session?.user?.id || null;
+      console.log('Auth state changed, new user ID:', newUserId);
+      setUserId(newUserId);
     });
 
     return () => subscription.unsubscribe();
@@ -25,27 +29,39 @@ const PriceAlerts = () => {
 
   // Fetch existing alerts with proper user filtering
   const { data: alerts, refetch } = useQuery({
-    queryKey: ["price-alerts", userId], // Include userId in the query key for proper caching
+    queryKey: ["price-alerts", userId],
     queryFn: async () => {
+      console.log('Fetching price alerts for user:', userId);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+      if (!user) {
+        console.error('No authenticated user found');
+        throw new Error("User not authenticated");
+      }
 
       const { data, error } = await supabase
         .from("price_alerts")
         .select("*")
-        .eq('user_id', user.id) // Ensure we only get alerts for the current user
+        .eq('user_id', user.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching alerts:', error);
+        throw error;
+      }
+
+      console.log('Alerts fetched successfully:', data);
       return data;
     },
-    enabled: !!userId, // Only run query when userId is available
-    staleTime: 1000 * 60, // Cache for 1 minute
-    refetchOnWindowFocus: true, // Refetch when window regains focus
+    enabled: !!userId,
+    staleTime: 1000 * 60,
+    refetchOnWindowFocus: true,
   });
 
+  console.log('PriceAlerts render state:', { userId, alertsCount: alerts?.length });
+
   if (!userId) {
-    return null; // Don't render anything until we have the user ID
+    console.log('No user ID available, not rendering PriceAlerts');
+    return null;
   }
 
   return (

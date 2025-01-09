@@ -5,13 +5,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 const fetchCryptoData = async () => {
   try {
+    console.log('Fetching crypto data...');
     const { data, error } = await supabase.functions.invoke('crypto-proxy', {
       body: {
         endpoint: '/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=5&page=1&sparkline=false'
       }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase function error:', error);
+      throw error;
+    }
+
+    console.log('Crypto data received:', data);
     return data;
   } catch (error) {
     console.error('Error fetching crypto data:', error);
@@ -26,7 +32,8 @@ const CryptoList = () => {
     queryFn: fetchCryptoData,
     refetchInterval: 30000,
     meta: {
-      onError: () => {
+      onError: (error: Error) => {
+        console.error('Query error:', error);
         toast({
           title: "Error",
           description: "Failed to fetch cryptocurrency data. Please try again later.",
@@ -35,6 +42,8 @@ const CryptoList = () => {
       },
     },
   });
+
+  console.log('CryptoList render state:', { isLoading, error, dataLength: cryptos?.length });
 
   if (isLoading) {
     return (
@@ -62,11 +71,26 @@ const CryptoList = () => {
   }
 
   if (error) {
+    console.error('Rendering error state:', error);
     return (
       <div className="glass-card rounded-lg p-6 animate-fade-in">
         <h2 className="text-xl font-semibold mb-6">Top Cryptocurrencies</h2>
         <div className="text-center py-8 text-muted-foreground">
           Unable to load cryptocurrency data.
+          <br />
+          Please try again later.
+        </div>
+      </div>
+    );
+  }
+
+  if (!cryptos || cryptos.length === 0) {
+    console.log('No crypto data available');
+    return (
+      <div className="glass-card rounded-lg p-6 animate-fade-in">
+        <h2 className="text-xl font-semibold mb-6">Top Cryptocurrencies</h2>
+        <div className="text-center py-8 text-muted-foreground">
+          No cryptocurrency data available.
           <br />
           Please try again later.
         </div>
@@ -88,7 +112,7 @@ const CryptoList = () => {
             </tr>
           </thead>
           <tbody>
-            {cryptos?.map((crypto) => (
+            {cryptos.map((crypto) => (
               <tr key={crypto.symbol} className="border-t border-secondary hover:bg-secondary/20 transition-colors">
                 <td className="py-4">
                   <div className="flex items-center gap-2">
@@ -125,4 +149,3 @@ const CryptoList = () => {
 };
 
 export default CryptoList;
-
