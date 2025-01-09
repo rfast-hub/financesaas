@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { validateEmail, validatePassword } from "@/utils/validation";
 import { handleSubscriptionCheck } from "@/utils/subscriptionUtils";
 import { getLoginErrorMessage } from "@/utils/loginErrors";
+import { validateLoginInputs } from "@/utils/loginValidation";
 import { AuthError } from "@supabase/supabase-js";
 
 export const useLogin = () => {
@@ -12,30 +12,15 @@ export const useLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const validateInputs = (email: string, password: string): boolean => {
-    if (!validateEmail(email)) {
-      toast({
-        variant: "destructive",
-        title: "Invalid email",
-        description: "Please enter a valid email address.",
-      });
-      return false;
-    }
-
-    if (!validatePassword(password)) {
-      toast({
-        variant: "destructive",
-        title: "Invalid password",
-        description: "Password must be at least 8 characters long.",
-      });
-      return false;
-    }
-
-    return true;
-  };
-
   const handleLogin = async (email: string, password: string) => {
-    if (!validateInputs(email, password)) {
+    const validationResult = validateLoginInputs(email, password);
+    
+    if (!validationResult.isValid && validationResult.error) {
+      toast({
+        variant: "destructive",
+        title: validationResult.error.title,
+        description: validationResult.error.description,
+      });
       return;
     }
 

@@ -1,7 +1,4 @@
-type LoginErrorType = {
-  title: string;
-  message: string;
-};
+import { LoginErrorType } from "@/types/auth";
 
 export const getLoginErrorMessage = (errorMessage: string): LoginErrorType => {
   switch (true) {
