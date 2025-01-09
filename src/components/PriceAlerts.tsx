@@ -3,21 +3,31 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertForm } from "./price-alerts/AlertForm";
 import { AlertList } from "./price-alerts/AlertList";
+import { useToast } from "@/components/ui/use-toast";
 
 const PriceAlerts = () => {
   const [userId, setUserId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     console.log('PriceAlerts component mounted');
-    // Get current user's ID
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        console.log('User ID set:', user.id);
-        setUserId(user.id);
+    const fetchUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.log('User ID set:', session.user.id);
+        setUserId(session.user.id);
+      } else {
+        console.log('No active session found');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to view your price alerts.",
+          variant: "destructive",
+        });
       }
-    });
+    };
+    
+    fetchUser();
 
-    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const newUserId = session?.user?.id || null;
       console.log('Auth state changed, new user ID:', newUserId);
@@ -25,23 +35,20 @@ const PriceAlerts = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]);
 
-  // Fetch existing alerts with proper user filtering
-  const { data: alerts, refetch } = useQuery({
+  const { data: alerts, refetch, isLoading, error } = useQuery({
     queryKey: ["price-alerts", userId],
     queryFn: async () => {
       console.log('Fetching price alerts for user:', userId);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('No authenticated user found');
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
       const { data, error } = await supabase
         .from("price_alerts")
         .select("*")
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -55,13 +62,39 @@ const PriceAlerts = () => {
     enabled: !!userId,
     staleTime: 1000 * 60,
     refetchOnWindowFocus: true,
+    meta: {
+      onError: (error: Error) => {
+        console.error('Query error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch price alerts. Please try again later.",
+          variant: "destructive",
+        });
+      },
+    },
   });
 
-  console.log('PriceAlerts render state:', { userId, alertsCount: alerts?.length });
+  if (isLoading) {
+    return (
+      <div className="glass-card rounded-lg p-6 animate-fade-in">
+        <h2 className="text-xl font-semibold mb-6">Price Alerts</h2>
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-secondary/50 rounded w-full" />
+          <div className="h-32 bg-secondary/50 rounded w-full" />
+        </div>
+      </div>
+    );
+  }
 
-  if (!userId) {
-    console.log('No user ID available, not rendering PriceAlerts');
-    return null;
+  if (error) {
+    return (
+      <div className="glass-card rounded-lg p-6 animate-fade-in">
+        <h2 className="text-xl font-semibold mb-6">Price Alerts</h2>
+        <div className="text-destructive text-center py-4">
+          Failed to load price alerts. Please try again later.
+        </div>
+      </div>
+    );
   }
 
   return (

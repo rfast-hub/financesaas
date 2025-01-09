@@ -2,11 +2,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 import SubscriptionStatus from "./subscription/SubscriptionStatus";
 import CancelSubscriptionButton from "./subscription/CancelSubscriptionButton";
 
 const SubscriptionManagement = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { data: subscription, isLoading: isLoadingSubscription, error, refetch } = useQuery({
     queryKey: ['subscription'],
@@ -46,6 +48,16 @@ const SubscriptionManagement = () => {
       return data;
     },
     retry: 1,
+    meta: {
+      onError: (error: Error) => {
+        console.error('Query error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch subscription data. Please try again later.",
+          variant: "destructive",
+        });
+      },
+    },
   });
 
   if (error) {
@@ -66,6 +78,12 @@ const SubscriptionManagement = () => {
           <CardTitle>Subscription</CardTitle>
           <CardDescription>Loading subscription details...</CardDescription>
         </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-secondary/50 rounded w-3/4" />
+            <div className="h-4 bg-secondary/50 rounded w-1/2" />
+          </div>
+        </CardContent>
       </Card>
     );
   }

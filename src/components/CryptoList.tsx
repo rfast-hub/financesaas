@@ -6,6 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 const fetchCryptoData = async () => {
   try {
     console.log('Fetching crypto data...');
+    const { data: session } = await supabase.auth.getSession();
+    
+    if (!session.session) {
+      console.error('No active session found');
+      throw new Error('Authentication required');
+    }
+
     const { data, error } = await supabase.functions.invoke('crypto-proxy', {
       body: {
         endpoint: '/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=5&page=1&sparkline=false'
