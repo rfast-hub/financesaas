@@ -4,41 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { AlertForm } from "./price-alerts/AlertForm";
 import { AlertList } from "./price-alerts/AlertList";
 import { useToast } from "@/components/ui/use-toast";
+import { useSession } from "@/hooks/useSession";
 
 const PriceAlerts = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { session, currentUser } = useSession();
 
   useEffect(() => {
-    console.log('PriceAlerts component mounted');
-    const fetchUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        console.log('User ID set:', session.user.id);
-        setUserId(session.user.id);
-      } else {
-        console.log('No active session found');
-      }
-    };
-    
-    fetchUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const newUserId = session?.user?.id || null;
-      console.log('Auth state changed, new user ID:', newUserId);
-      setUserId(newUserId);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [toast]);
+    if (currentUser?.id) {
+      setUserId(currentUser.id);
+    }
+  }, [currentUser]);
 
   const { data: alerts, refetch, isLoading, error } = useQuery({
     queryKey: ["price-alerts", userId],
     queryFn: async () => {
-      console.log('Fetching price alerts for user:', userId);
-      if (!userId) {
-        return [];
-      }
+      if (!userId) return [];
 
       const { data, error } = await supabase
         .from("price_alerts")
@@ -46,15 +28,10 @@ const PriceAlerts = () => {
         .eq('user_id', userId)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error('Error fetching alerts:', error);
-        throw error;
-      }
-
-      console.log('Alerts fetched successfully:', data);
+      if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!userId && !!session,
     staleTime: 1000 * 60,
     refetchOnWindowFocus: true,
     meta: {

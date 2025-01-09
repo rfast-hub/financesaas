@@ -2,38 +2,22 @@ import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/hooks/useSession";
 
 const fetchCryptoData = async () => {
-  try {
-    console.log('Fetching crypto data...');
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      console.error('No active session found');
-      return null;
+  const { data, error } = await supabase.functions.invoke('crypto-proxy', {
+    body: {
+      endpoint: '/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=5&page=1&sparkline=false'
     }
-
-    const { data, error } = await supabase.functions.invoke('crypto-proxy', {
-      body: {
-        endpoint: '/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=5&page=1&sparkline=false'
-      }
-    });
-    
-    if (error) {
-      console.error('Supabase function error:', error);
-      throw error;
-    }
-
-    console.log('Crypto data received:', data);
-    return data;
-  } catch (error) {
-    console.error('Error fetching crypto data:', error);
-    throw error;
-  }
+  });
+  
+  if (error) throw error;
+  return data;
 };
 
 const CryptoList = () => {
   const { toast } = useToast();
+  const { session } = useSession();
 
   const { data: cryptos, isLoading, error } = useQuery({
     queryKey: ['cryptos'],
@@ -49,10 +33,8 @@ const CryptoList = () => {
         });
       },
     },
-    enabled: true // Always enabled as we check session inside fetchCryptoData
+    enabled: !!session // Only fetch when session is available
   });
-
-  console.log('CryptoList render state:', { isLoading, error, dataLength: cryptos?.length });
 
   if (isLoading) {
     return (

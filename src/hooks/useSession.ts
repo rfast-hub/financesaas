@@ -16,41 +16,27 @@ export const useSession = () => {
   const { data: sessionData } = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
-      try {
-        console.log('Checking session status...');
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          updateSession(false);
-          setLoading(false);
-          return null;
-        }
-
-        if (currentSession) {
-          console.log('Session found, checking subscription...');
-          const isActive = await handleSubscriptionCheck(currentSession.user.id);
-          console.log('Subscription status:', isActive);
-          updateSession(isActive);
-          setLoading(false);
-          return currentSession;
-        } else {
-          console.log('No active session found');
-          updateSession(false);
-          setLoading(false);
-          return null;
-        }
-      } catch (error) {
-        console.error("Session check error:", error);
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session error:", sessionError);
         updateSession(false);
         setLoading(false);
         return null;
       }
+
+      if (currentSession) {
+        const isActive = await handleSubscriptionCheck(currentSession.user.id);
+        updateSession(isActive);
+        return currentSession;
+      }
+      
+      updateSession(false);
+      return null;
     },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     refetchOnWindowFocus: true,
-    retry: 1,
-    enabled: true // Always run the query
+    retry: 1
   });
 
   return { 
