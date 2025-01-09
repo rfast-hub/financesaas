@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { validateEmail, validatePassword } from "@/utils/validation";
 import { handleSubscriptionCheck } from "@/utils/subscriptionUtils";
+import { getLoginErrorMessage } from "@/utils/loginErrors";
 import { AuthError } from "@supabase/supabase-js";
 
 export const useLogin = () => {
@@ -11,14 +12,14 @@ export const useLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = async (email: string, password: string) => {
+  const validateInputs = (email: string, password: string): boolean => {
     if (!validateEmail(email)) {
       toast({
         variant: "destructive",
         title: "Invalid email",
         description: "Please enter a valid email address.",
       });
-      return;
+      return false;
     }
 
     if (!validatePassword(password)) {
@@ -27,6 +28,14 @@ export const useLogin = () => {
         title: "Invalid password",
         description: "Password must be at least 8 characters long.",
       });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleLogin = async (email: string, password: string) => {
+    if (!validateInputs(email, password)) {
       return;
     }
 
@@ -39,22 +48,11 @@ export const useLogin = () => {
       });
 
       if (error) {
-        let errorMessage = "An error occurred during login.";
-        let errorTitle = "Login failed";
-        
-        // Handle specific error cases
-        if (error.message.includes("Invalid login credentials")) {
-          errorTitle = "Invalid credentials";
-          errorMessage = "The email or password you entered is incorrect. Please check your credentials and try again.";
-        } else if (error.message.includes("Email not confirmed")) {
-          errorTitle = "Email not verified";
-          errorMessage = "Please check your email and click the verification link before signing in.";
-        }
-        
+        const errorDetails = getLoginErrorMessage(error.message);
         toast({
           variant: "destructive",
-          title: errorTitle,
-          description: errorMessage,
+          title: errorDetails.title,
+          description: errorDetails.message,
         });
         console.error("Login error:", error.message);
         return;
