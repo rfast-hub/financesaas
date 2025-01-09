@@ -40,16 +40,19 @@ export const useLogin = () => {
 
       if (error) {
         let errorMessage = "Invalid credentials. Please try again.";
+        let errorTitle = "Login failed";
         
-        if (error.message.includes("Invalid login credentials")) {
+        // Handle specific error cases
+        if (error.message.includes("Email not confirmed")) {
+          errorTitle = "Email not verified";
+          errorMessage = "Please check your email and click the verification link before signing in. If you haven't received the email, you can request a new one.";
+        } else if (error.message.includes("Invalid login credentials")) {
           errorMessage = "The email or password you entered is incorrect. Please try again.";
-        } else if (error.message.includes("Email not confirmed")) {
-          errorMessage = "Please verify your email address before signing in.";
         }
         
         toast({
           variant: "destructive",
-          title: "Login failed",
+          title: errorTitle,
           description: errorMessage,
         });
         console.error("Login error:", error.message);
