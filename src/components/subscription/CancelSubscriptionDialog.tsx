@@ -38,9 +38,19 @@ const CancelSubscriptionDialog = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Confirm Cancellation</DialogTitle>
-          <DialogDescription>
-            Please enter your password to confirm subscription cancellation.
-            {!isTrial && " Your subscription will be cancelled at the end of the current billing period."}
+          <DialogDescription className="space-y-2">
+            {isTrial ? (
+              <>
+                <p>Are you sure you want to cancel your trial? Your access will end immediately.</p>
+                <p className="font-medium">You won't be charged anything as this is a free trial.</p>
+              </>
+            ) : (
+              <>
+                <p>Are you sure you want to cancel your subscription?</p>
+                <p className="font-medium">Your subscription will remain active until the end of your current billing period. You won't be charged after that.</p>
+              </>
+            )}
+            <p>Please enter your password to confirm cancellation.</p>
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
