@@ -12,7 +12,8 @@ export const useSession = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const { data: sessionData } = useQuery({
+  // Optimize session check with React Query
+  useQuery({
     queryKey: ['session'],
     queryFn: async () => {
       try {
@@ -21,28 +22,36 @@ export const useSession = () => {
         if (sessionError) {
           console.error("Session error:", sessionError);
           updateSession(false);
+          setLoading(false);
           return null;
         }
 
         if (currentSession) {
+          // Only check subscription if we have a session
           const isActive = await handleSubscriptionCheck(currentSession.user.id);
           updateSession(isActive);
+          setLoading(false);
           return currentSession;
         } else {
           updateSession(false);
+          setLoading(false);
           return null;
         }
       } catch (error) {
         console.error("Session check error:", error);
         updateSession(false);
-        return null;
-      } finally {
         setLoading(false);
+        return null;
       }
     },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    refetchOnWindowFocus: true,
-    retry: 1
+    refetchOnWindowFocus: false,
+    retry: 1,
+    initialData: () => {
+      // Check if we have a session in localStorage to prevent initial loading
+      const persistedSession = localStorage.getItem('supabase.auth.token');
+      return persistedSession ? JSON.parse(persistedSession) : null;
+    }
   });
 
   const deleteAccount = async () => {
@@ -77,6 +86,7 @@ export const useSession = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         updateSession(false);
+        setLoading(false);
         return;
       }
 
@@ -86,6 +96,7 @@ export const useSession = () => {
       } else {
         updateSession(false);
       }
+      setLoading(false);
     });
 
     return () => {
