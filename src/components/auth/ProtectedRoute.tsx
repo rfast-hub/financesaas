@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useSession } from "@/hooks/useSession";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isSessionValid } from "@/utils/sessionUtils";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,7 +10,6 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { session, loading } = useSession();
 
-  // Add a timeout to prevent infinite loading
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
@@ -20,8 +20,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  if (!session) {
-    return <Navigate to="/login" replace />;
+  if (!session || !isSessionValid(session)) {
+    return <Navigate to="/login?expired=true" replace />;
   }
 
   return <>{children}</>;
