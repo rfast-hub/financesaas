@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { handleSubscriptionCheck } from "@/utils/subscriptionUtils";
 import { getLoginErrorMessage } from "@/utils/loginErrors";
 import { validateLoginInputs } from "@/utils/loginValidation";
-import { AuthError } from "@supabase/supabase-js";
 
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -57,7 +56,8 @@ export const useLogin = () => {
             return;
           }
 
-          navigate("/");
+          // Changed navigation to /dashboard instead of /
+          navigate("/dashboard");
           
           toast({
             title: "Welcome back!",
