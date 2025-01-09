@@ -10,6 +10,9 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { session, loading } = useSession();
 
+  // Add debug logs to track session state
+  console.log('Protected Route - Session State:', { session, loading });
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4 bg-background">
@@ -32,8 +35,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  if (!session || !isSessionValid(session)) {
-    console.log('Session invalid or not found, redirecting to login');
+  // Only redirect if we're certain there's no valid session
+  if (!session) {
+    console.log('Session not found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 

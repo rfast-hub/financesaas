@@ -56,12 +56,15 @@ export const useLogin = () => {
             return;
           }
 
+          // First update local storage to ensure session persistence
+          localStorage.setItem('supabase.auth.token', JSON.stringify(session));
+
           toast({
             title: "Welcome back!",
             description: "Successfully logged in.",
           });
 
-          // Ensure navigation happens after successful login
+          // Navigate after ensuring session is stored
           navigate("/dashboard", { replace: true });
           
         } catch (subscriptionError) {
