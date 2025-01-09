@@ -5,11 +5,45 @@ import { useNavigate } from "react-router-dom";
 import { deleteUserData, deleteUserAccount, signOut } from "@/utils/authUtils";
 import { handleSubscriptionCheck } from "@/utils/subscriptionUtils";
 import { useSessionState } from "./useSessionState";
+import { useQuery } from "@tanstack/react-query";
 
 export const useSession = () => {
   const { session, loading, updateSession, setLoading } = useSessionState();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const { data: sessionData } = useQuery({
+    queryKey: ['session'],
+    queryFn: async () => {
+      try {
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          updateSession(false);
+          return null;
+        }
+
+        if (currentSession) {
+          const isActive = await handleSubscriptionCheck(currentSession.user.id);
+          updateSession(isActive);
+          return currentSession;
+        } else {
+          updateSession(false);
+          return null;
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+        updateSession(false);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    refetchOnWindowFocus: true,
+    retry: 1
+  });
 
   const deleteAccount = async () => {
     try {
@@ -40,30 +74,6 @@ export const useSession = () => {
   };
 
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          updateSession(false);
-          return;
-        }
-
-        if (currentSession) {
-          const isActive = await handleSubscriptionCheck(currentSession.user.id);
-          updateSession(isActive);
-        } else {
-          updateSession(false);
-        }
-      } catch (error) {
-        console.error("Session check error:", error);
-        updateSession(false);
-      }
-    };
-
-    checkSession();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         updateSession(false);
