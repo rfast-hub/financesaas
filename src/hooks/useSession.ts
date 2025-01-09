@@ -13,10 +13,11 @@ export const useSession = () => {
   useSessionSubscription(updateSession, setLoading);
 
   // Optimize session check with React Query
-  useQuery({
+  const { data: sessionData } = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
       try {
+        console.log('Checking session status...');
         const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -27,11 +28,14 @@ export const useSession = () => {
         }
 
         if (currentSession) {
+          console.log('Session found, checking subscription...');
           const isActive = await handleSubscriptionCheck(currentSession.user.id);
+          console.log('Subscription status:', isActive);
           updateSession(isActive);
           setLoading(false);
           return currentSession;
         } else {
+          console.log('No active session found');
           updateSession(false);
           setLoading(false);
           return null;
@@ -44,13 +48,15 @@ export const useSession = () => {
       }
     },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     retry: 1,
-    initialData: () => {
-      const persistedSession = localStorage.getItem('supabase.auth.token');
-      return persistedSession ? JSON.parse(persistedSession) : null;
-    }
+    enabled: true // Always run the query
   });
 
-  return { session, loading, deleteAccount };
+  return { 
+    session, 
+    loading, 
+    deleteAccount,
+    currentUser: sessionData?.user ?? null 
+  };
 };

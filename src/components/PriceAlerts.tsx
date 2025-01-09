@@ -18,11 +18,6 @@ const PriceAlerts = () => {
         setUserId(session.user.id);
       } else {
         console.log('No active session found');
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to view your price alerts.",
-          variant: "destructive",
-        });
       }
     };
     
@@ -42,7 +37,7 @@ const PriceAlerts = () => {
     queryFn: async () => {
       console.log('Fetching price alerts for user:', userId);
       if (!userId) {
-        throw new Error("User not authenticated");
+        return [];
       }
 
       const { data, error } = await supabase

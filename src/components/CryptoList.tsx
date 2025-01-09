@@ -6,11 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 const fetchCryptoData = async () => {
   try {
     console.log('Fetching crypto data...');
-    const { data: session } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     
-    if (!session.session) {
+    if (!session) {
       console.error('No active session found');
-      throw new Error('Authentication required');
+      return null;
     }
 
     const { data, error } = await supabase.functions.invoke('crypto-proxy', {
@@ -34,6 +34,7 @@ const fetchCryptoData = async () => {
 
 const CryptoList = () => {
   const { toast } = useToast();
+
   const { data: cryptos, isLoading, error } = useQuery({
     queryKey: ['cryptos'],
     queryFn: fetchCryptoData,
@@ -48,6 +49,7 @@ const CryptoList = () => {
         });
       },
     },
+    enabled: true // Always enabled as we check session inside fetchCryptoData
   });
 
   console.log('CryptoList render state:', { isLoading, error, dataLength: cryptos?.length });
