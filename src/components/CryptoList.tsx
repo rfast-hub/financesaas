@@ -5,13 +5,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 
 const fetchCryptoData = async () => {
+  console.log('Fetching crypto data...');
   const { data, error } = await supabase.functions.invoke('crypto-proxy', {
     body: {
       endpoint: '/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=5&page=1&sparkline=false'
     }
   });
   
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching crypto data:', error);
+    throw error;
+  }
+  console.log('Crypto data received:', data);
   return data;
 };
 
@@ -23,7 +28,7 @@ const CryptoList = () => {
     queryKey: ['cryptos'],
     queryFn: fetchCryptoData,
     refetchInterval: 30000,
-    enabled: true, // Always fetch crypto data regardless of session
+    retry: 2,
     meta: {
       onError: (error: Error) => {
         console.error('Query error:', error);

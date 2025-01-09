@@ -3,21 +3,27 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const fetchGlobalData = async () => {
+  console.log('Fetching global market data...');
   const { data, error } = await supabase.functions.invoke('crypto-proxy', {
     body: {
       endpoint: '/global'
     }
   });
   
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching global data:', error);
+    throw error;
+  }
+  console.log('Global data received:', data);
   return data;
 };
 
 const MarketStats = () => {
-  const { data: globalData, isLoading } = useQuery({
+  const { data: globalData, isLoading, error } = useQuery({
     queryKey: ['globalMarketData'],
     queryFn: fetchGlobalData,
     refetchInterval: 60000, // Refetch every minute
+    retry: 2,
   });
 
   const formatNumber = (num: number) => {
@@ -26,6 +32,18 @@ const MarketStats = () => {
     if (num >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
     return `$${num.toFixed(0)}`;
   };
+
+  if (error) {
+    console.error('Market stats error:', error);
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="glass-card p-6 rounded-lg">
+          <h3 className="text-sm font-medium text-destructive">Error loading market data</h3>
+          <p className="text-sm text-muted-foreground">Please try again later</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
