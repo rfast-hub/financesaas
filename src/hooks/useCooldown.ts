@@ -1,31 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
-export const useCooldown = () => {
+export const useCooldown = (initialCooldown = 60) => {
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [isInCooldown, setIsInCooldown] = useState(false);
 
-  const startCooldown = (seconds: number) => {
+  const startCooldown = useCallback((seconds: number = initialCooldown) => {
     setCooldownSeconds(seconds);
-  };
+    setIsInCooldown(true);
 
-  useEffect(() => {
-    if (cooldownSeconds > 0) {
-      const interval = setInterval(() => {
-        setCooldownSeconds((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    const interval = setInterval(() => {
+      setCooldownSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setIsInCooldown(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
-      return () => clearInterval(interval);
-    }
-  }, [cooldownSeconds]);
+    return () => clearInterval(interval);
+  }, [initialCooldown]);
 
   return {
     cooldownSeconds,
-    startCooldown,
-    isInCooldown: cooldownSeconds > 0
+    isInCooldown,
+    startCooldown
   };
 };
